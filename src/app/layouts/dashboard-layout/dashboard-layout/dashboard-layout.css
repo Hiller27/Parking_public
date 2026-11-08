@@ -1,0 +1,249 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    color: #1e293b;
+}
+
+.app-shell {
+    min-height: 100vh;
+    background: #f5f7fb;
+}
+
+.sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: 255px;
+    display: flex;
+    flex-direction: column;
+    padding: 25px 16px;
+    background: #111c32;
+    color: #fff;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px 30px;
+    color: white;
+    text-decoration: none;
+}
+
+.brand-icon {
+    display: grid;
+    place-items: center;
+    width: 43px;
+    height: 43px;
+    border-radius: 12px;
+    background: #3b82f6;
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.brand strong,
+.brand small,
+.user-info strong,
+.user-info small,
+.sidebar-bottom strong,
+.sidebar-bottom small {
+    display: block;
+}
+
+.brand small,
+.user-info small,
+.sidebar-bottom small {
+    margin-top: 4px;
+    color: #94a3b8;
+    font-size: 11px;
+}
+
+.menu-label {
+    padding: 8px 12px;
+    color: #8291a9;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.menu {
+    display: grid;
+    gap: 7px;
+}
+
+.menu a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 12px;
+    border-radius: 9px;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 13px;
+    transition: background .2s, color .2s;
+}
+
+.menu a span {
+    width: 22px;
+    text-align: center;
+    font-size: 18px;
+}
+
+.menu a:hover,
+.menu a.active {
+    background: #263b5d;
+    color: white;
+}
+
+.menu a.active {
+    box-shadow: inset 3px 0 #60a5fa;
+}
+
+.sidebar-bottom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: auto;
+    padding: 15px 9px;
+    border-top: 1px solid #2a3549;
+    font-size: 12px;
+}
+
+.online-dot {
+    width: 9px;
+    height: 9px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #4ade80;
+}
+
+.main-area {
+    min-height: 100vh;
+    margin-left: 255px;
+}
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 76px;
+    padding: 0 30px;
+    border-bottom: 1px solid #e8edf4;
+    background: #fff;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.breadcrumb strong {
+    color: #1e293b;
+}
+
+.separator {
+    color: #cbd5e1;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.menu-section {
+    margin-top: 24px;
+}
+
+.menu-title {
+    display: block;
+    padding: 0 15px;
+    margin-bottom: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #929bad;
+}
+
+.avatar {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.user-info strong {
+    font-size: 12px;
+}
+
+.user-info small {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.page-content {
+    padding: 30px;
+}
+
+.menu-toggle,
+.sidebar-overlay {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+    }
+
+    .sidebar.sidebar-open {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay.visible {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        background: rgb(15 23 42 / 45%);
+    }
+
+    .main-area {
+        margin-left: 0;
+    }
+
+    .topbar {
+        min-height: 65px;
+        padding: 0 15px;
+        gap: 12px;
+    }
+
+    .menu-toggle {
+        display: block;
+        border: 0;
+        background: transparent;
+        font-size: 23px;
+        cursor: pointer;
+    }
+
+    .page-content {
+        padding: 18px 14px;
+    }
+
+    .user-info,
+    .breadcrumb span:first-child,
+    .breadcrumb .separator {
+        display: none;
+    }
+}

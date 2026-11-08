@@ -1,0 +1,671 @@
+<section class="page">
+
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">OPERACIÓN DEL PARQUEADERO</p>
+            <h1>Ingresos y salidas</h1>
+
+            <p class="subtitle">
+                @if (isResidential) {
+                Registra residentes, visitantes y vehículos autorizados.
+                } @else {
+                Captura los datos por estancia sin crear registros permanentes de personas o vehículos.
+                }
+            </p>
+        </div>
+
+        <button class="btn btn-primary" (click)="openEntryForm()">
+            + Registrar ingreso
+        </button>
+    </header>
+
+    @if (successMessage) {
+    <div class="alert alert-success" role="status">
+        {{ successMessage }}
+    </div>
+    }
+
+    @if (errorMessage && !entryFormOpen && !exitFormOpen) {
+    <div class="alert alert-error" role="alert">
+        {{ errorMessage }}
+    </div>
+    }
+
+    <div class="stats-grid">
+
+        <article class="stat-card">
+            <span class="stat-label">Vehículos dentro del parqueadero</span>
+            <strong>{{ activeCount }}</strong>
+            <span class="stat-description">Ingresos sin cerrar</span>
+        </article>
+
+        @if (isResidential) {
+        <article class="stat-card">
+            <span class="stat-label">Vehículos registrados activos</span>
+            <strong>{{ availableVehicleCount }}</strong>
+            <span class="stat-description">Habilitados para nuevos ingresos</span>
+        </article>
+        } @else {
+        <article class="stat-card">
+            <span class="stat-label">Modalidad de ingreso</span>
+            <strong>Rápido</strong>
+            <span class="stat-description">Datos guardados solo en la estancia</span>
+        </article>
+        }
+
+        <article class="stat-card">
+            <span class="stat-label">Cajas disponibles</span>
+            <strong>{{ availableBoxes.length }}</strong>
+            <span class="stat-description">Listas para custodiar llaves</span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Estacionamientos libres</span>
+            <strong>{{ availableSpaces.length }}</strong>
+            <span class="stat-description">Espacios disponibles</span>
+        </article>
+
+    </div>
+
+    <section class="panel">
+
+        <div class="panel-header">
+            <div>
+                <h2>Vehículos dentro del parqueadero</h2>
+                <p>
+                    Los ingresos se mantienen activos hasta que se registre la salida.
+                </p>
+            </div>
+
+            <span class="result-count">{{ stays.length }} activos</span>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Vehículo</th>
+                        <th>
+                            {{ isResidential ? 'Propietario' : 'Responsable de ingreso' }}
+                        </th>
+                        <th>Caja digital</th>
+                        <th>Estacionamiento</th>
+                        <th>Entrada</th>
+                        <th>Tiempo transcurrido</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @for (stay of stays; track stay.id) {
+                    <tr>
+                        <td>
+                            <strong>{{ stay.vehiclePlate }}</strong>
+                        </td>
+
+                        <td>{{ stay.ownerName }}</td>
+                        <td>{{ stay.keyBoxCode }}</td>
+                        <td>{{ stay.parkingSpaceNumber }}</td>
+                        <td>{{ stay.entryAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                        <td>{{ elapsedLabel(stay.entryAt) }}</td>
+
+                        <td>
+                            <button class="btn btn-primary btn-small" (click)="openExitForm(stay)">
+                                Registrar salida
+                            </button>
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <strong>No hay vehículos dentro del parqueadero</strong>
+                            <p>
+                                Cuando registres un ingreso, aparecerá en este listado.
+                            </p>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+
+            </table>
+        </div>
+
+    </section>
+
+</section>
+
+
+<!-- FORMULARIO DE INGRESO -->
+@if (entryFormOpen) {
+
+<div class="modal-backdrop" (click)="closeEntryForm()">
+
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="entry-title"
+        (click)="$event.stopPropagation()">
+
+        <header class="modal-header">
+            <div>
+                <p class="eyebrow">NUEVO REGISTRO</p>
+                <h2 id="entry-title">Ingreso de vehículo</h2>
+            </div>
+
+            <button type="button" class="close-btn" aria-label="Cerrar formulario" (click)="closeEntryForm()">
+                ×
+            </button>
+        </header>
+
+        @if (errorMessage) {
+        <div class="alert alert-error" role="alert">
+            {{ errorMessage }}
+        </div>
+        }
+
+        <form (ngSubmit)="registerEntry()">
+
+            <!-- VEHÍCULO RESIDENCIAL -->
+            @if (isResidential) {
+
+            <h3>1. Seleccionar residente</h3>
+
+            <label>
+                Residente *
+                <select name="residentId" [(ngModel)]="entryForm.residentId"
+                    (ngModelChange)="onResidentSelected($event)" required>
+
+                    <option value="">Selecciona un residente</option>
+
+                    @for (resident of residents; track resident.id) {
+                    <option [value]="resident.id">
+                        {{ resident.fullName }} — {{ resident.documentNumber }}
+                    </option>
+                    }
+
+                </select>
+            </label>
+
+            @if (entryForm.residentId) {
+            <label>
+                Vehículo del residente *
+                <select name="vehicleId" [(ngModel)]="entryForm.vehicleId"
+                    (ngModelChange)="onEntryVehicleSelected($event)" required>
+                    <option value="">Selecciona un vehículo</option>
+                    @for (vehicle of vehiclesForSelectedResident; track vehicle.id) {
+                    <option [value]="vehicle.id">
+                        {{ vehicle.plate }} — {{ vehicle.brand }}
+                        {{ vehicle.model }} — {{ vehicle.color || 'Color no registrado' }}
+                    </option>
+                    }
+                </select>
+            </label>
+
+            @if (vehiclesForSelectedResident.length === 0) {
+            <p class="form-note">
+                Este residente no tiene vehículos activos vinculados. Registra uno
+                desde el módulo de residentes para continuar.
+            </p>
+            } @else if (selectedEntryVehicle) {
+            <div class="vehicle-summary" aria-live="polite">
+                <span>Vehículo seleccionado</span>
+                <strong>
+                    {{ selectedEntryVehicle.plate }} ·
+                    {{ selectedEntryVehicle.brand || 'Marca no registrada' }}
+                    {{ selectedEntryVehicle.model }}
+                    @if (selectedEntryVehicle.color) {
+                    · {{ selectedEntryVehicle.color }}
+                    }
+                </strong>
+            </div>
+            }
+            }
+
+            } @else {
+
+            <!-- VEHÍCULO PÚBLICO -->
+            <h3>1. Identificación del vehículo</h3>
+
+            <label>
+                Placa del vehículo *
+                <input name="vehiclePlate" [(ngModel)]="entryForm.vehiclePlate" required maxlength="10"
+                    placeholder="Ejemplo: ABC123" style="text-transform: uppercase;" />
+            </label>
+
+            <div class="form-grid">
+                <label>
+                    Marca *
+                    <input name="vehicleBrand" [(ngModel)]="entryForm.vehicleBrand" required maxlength="60"
+                        placeholder="Ejemplo: Toyota" />
+                </label>
+
+                <label>
+                    Modelo *
+                    <input name="vehicleModel" [(ngModel)]="entryForm.vehicleModel" required maxlength="60"
+                        placeholder="Ejemplo: Corolla" />
+                </label>
+
+                <label>
+                    Color
+                    <input name="vehicleColor" [(ngModel)]="entryForm.vehicleColor" maxlength="40"
+                        placeholder="Ejemplo: Gris" />
+                </label>
+            </div>
+
+            <p class="form-note">
+                Los datos del vehículo y de la persona se guardarán únicamente en el registro de esta estancia,
+                visible en el historial. No se crearán registros permanentes de clientes ni vehículos.
+            </p>
+
+            }
+
+            <h3>2. Persona que entrega el vehículo</h3>
+
+            <div class="form-grid">
+
+                <label>
+                    Nombre completo *
+                    <input name="entryPersonName" [(ngModel)]="entryForm.entryPersonName" required maxlength="120"
+                        placeholder="Nombre y apellidos" />
+                </label>
+
+                <label>
+                    Cédula *
+                    <input name="entryPersonDocument" [(ngModel)]="entryForm.entryPersonDocument" required
+                        maxlength="30" placeholder="Número de documento" />
+                </label>
+
+            </div>
+
+            <h3>3. Asignar recursos</h3>
+
+            @if (isResidential) {
+            @if (selectedAssignment) {
+            <div class="vehicle-summary" aria-live="polite">
+                <span>Recursos fijos asignados al residente</span>
+                <strong>
+                    Caja {{ selectedAssignment.keyBoxCode }} ·
+                    Estacionamiento {{ selectedAssignment.parkingSpaceNumber }}
+                </strong>
+            </div>
+            } @else {
+            <p class="form-note" role="status">{{ assignmentNotice }}</p>
+            }
+            } @else {
+            <div class="form-grid">
+
+                <label>
+                    Caja digital disponible *
+                    <select name="keyBoxId" [(ngModel)]="entryForm.keyBoxId" required>
+
+                        <option value="">Selecciona una caja</option>
+
+                        @for (box of availableBoxes; track box.id) {
+                        <option [value]="box.id">
+                            {{ box.code }} — {{ box.location }}
+                            — Compartimento {{ box.compartmentNumber }}
+                        </option>
+                        }
+
+                    </select>
+                </label>
+
+                <label>
+                    Estacionamiento disponible *
+                    <select name="parkingSpaceId" [(ngModel)]="entryForm.parkingSpaceId" required>
+
+                        <option value="">Selecciona un espacio</option>
+
+                        @for (space of availableSpaces; track space.id) {
+                        <option [value]="space.id">
+                            {{ space.number }} — {{ space.building }}
+                            — {{ space.zone }}
+                        </option>
+                        }
+
+                    </select>
+                </label>
+
+            </div>
+            }
+
+            <p class="form-note">
+                La fecha y hora de entrada se registran automáticamente.
+                Verifica los datos antes de confirmar.
+            </p>
+
+            <footer class="modal-actions">
+
+                <button type="button" class="btn btn-secondary" (click)="closeEntryForm()">
+                    Cancelar
+                </button>
+
+                <button type="submit" class="btn btn-primary"
+                    [disabled]="isResidential && !selectedAssignment">
+                    Confirmar ingreso
+                </button>
+
+            </footer>
+
+        </form>
+
+    </section>
+
+</div>
+}
+
+
+<!-- FORMULARIO DE SALIDA -->
+@if (exitFormOpen && selectedStay) {
+
+<div class="modal-backdrop" (click)="closeExitForm()">
+
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="exit-title"
+        (click)="$event.stopPropagation()">
+
+        <header class="modal-header">
+            <div>
+                <p class="eyebrow">CIERRE DE ESTANCIA</p>
+                <h2 id="exit-title">Salida de vehículo</h2>
+            </div>
+
+            <button type="button" class="close-btn" aria-label="Cerrar formulario" (click)="closeExitForm()">
+                ×
+            </button>
+        </header>
+
+        <div class="vehicle-summary">
+
+            <span>Placa</span>
+            <strong>{{ selectedStay.vehiclePlate }}</strong>
+
+            <span>
+                {{ selectedStay.operationMode === 'RESIDENTIAL'
+                ? 'Propietario registrado'
+                : 'Responsable de ingreso' }}
+            </span>
+            <strong>{{ selectedStay.ownerName }}</strong>
+
+            <span>Caja que se liberará</span>
+            <strong>{{ selectedStay.keyBoxCode }}</strong>
+
+            <span>Estacionamiento que se liberará</span>
+            <strong>{{ selectedStay.parkingSpaceNumber }}</strong>
+
+        </div>
+
+        @if (errorMessage) {
+        <div class="alert alert-error" role="alert">
+            {{ errorMessage }}
+        </div>
+        }
+
+        <form (ngSubmit)="registerExit()">
+
+            <h3>
+                @if (selectedStay.operationMode === 'RESIDENTIAL') {
+                Verificación de propietario o autorizado
+                } @else {
+                Datos de quien retira el vehículo
+                }
+            </h3>
+
+            <label>
+                Nombre completo *
+                <input name="exitPersonName" [(ngModel)]="exitForm.exitPersonName" required maxlength="120"
+                    placeholder="Nombre de la persona" />
+            </label>
+
+            <label>
+                Cédula *
+                <input name="exitPersonDocument" [(ngModel)]="exitForm.exitPersonDocument" required maxlength="30"
+                    placeholder="Documento de quien retira" />
+            </label>
+
+            @if (selectedStay.operationMode === 'RESIDENTIAL') {
+
+            <p class="form-note">
+                La cédula debe coincidir con el propietario o con una
+                persona autorizada registrada para este vehículo.
+                Si no coincide, la salida será rechazada.
+            </p>
+
+            } @else {
+
+            <p class="form-note">
+                Registra los datos de identificación de la persona
+                que retira el vehículo. No necesita estar registrada
+                previamente como cliente.
+            </p>
+
+            <!-- MEDIO DE PAGO: SOLO PARA PARQUEADERO PÚBLICO -->
+            <h3>Medio de pago</h3>
+
+            <label>
+                ¿Cómo pagó el cliente? *
+
+                <select name="paymentMethod" [(ngModel)]="exitForm.paymentMethod" required>
+
+                    <option value="">Selecciona el medio de pago</option>
+                    <option value="CASH">Efectivo</option>
+                    <option value="CARD">Tarjeta</option>
+                    <option value="TRANSFER">Transferencia</option>
+
+                </select>
+            </label>
+
+            <p class="form-note">
+                Selecciona cómo realizó el cliente el pago.
+                Esta información quedará guardada en el historial
+                y aparecerá en el comprobante.
+            </p>
+
+            <div class="form-note">
+                <strong>Información del cobro</strong>
+
+                <p>
+                    El valor se calculará automáticamente al confirmar
+                    la salida, según el tiempo de permanencia y las
+                    tarifas configuradas.
+                </p>
+
+                <p>
+                    Se cobra por hora iniciada, sin minutos de gracia,
+                    con aplicación del tope diario.
+                </p>
+            </div>
+
+            }
+
+            <footer class="modal-actions">
+
+                <button type="button" class="btn btn-secondary" (click)="closeExitForm()">
+                    Cancelar
+                </button>
+
+                <button type="submit" class="btn btn-primary">
+                    Registrar salida
+                </button>
+
+            </footer>
+
+        </form>
+
+    </section>
+
+</div>
+}
+
+
+<!-- COMPROBANTE DE SALIDA -->
+<!-- ESTE MODAL DEBE ESTAR FUERA DEL FORMULARIO DE SALIDA -->
+@if (receiptModalOpen && receiptStay) {
+
+<div class="modal-backdrop receipt-backdrop" (click)="closeReceiptModal()">
+
+    <section class="modal receipt-modal" role="dialog" aria-modal="true" aria-labelledby="receipt-title"
+        (click)="$event.stopPropagation()">
+
+        <header class="modal-header">
+            <div>
+                <p class="eyebrow">COMPROBANTE DE SALIDA</p>
+                <h2 id="receipt-title">Estancia finalizada</h2>
+            </div>
+
+            <button type="button" class="close-btn" aria-label="Cerrar comprobante" (click)="closeReceiptModal()">
+                ×
+            </button>
+        </header>
+
+        <div class="receipt-content">
+
+            <!-- CONFIRMACIÓN -->
+            <div class="receipt-success">
+                <span class="receipt-check">✓</span>
+                <strong>Salida registrada correctamente</strong>
+                <p>El vehículo ha salido del parqueadero.</p>
+            </div>
+
+            <!-- VEHÍCULO -->
+            <div class="receipt-section">
+                <h3>Información del vehículo</h3>
+
+                <div class="receipt-grid">
+
+                    <div>
+                        <span>Placa</span>
+                        <strong>{{ receiptStay.vehiclePlate }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Estacionamiento</span>
+                        <strong>{{ receiptStay.parkingSpaceNumber }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Caja digital</span>
+                        <strong>{{ receiptStay.keyBoxCode }}</strong>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- CLIENTE -->
+            <div class="receipt-section">
+                <h3>Información del cliente</h3>
+
+                <div class="receipt-grid">
+
+                    <div>
+                        <span>Persona que entregó</span>
+                        <strong>{{ receiptStay.entryPersonName }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Documento</span>
+                        <strong>{{ receiptStay.entryPersonDocument }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Persona que retiró</span>
+                        <strong>{{ receiptStay.exitPersonName }}</strong>
+                    </div>
+
+                    <div>
+                        <span>Documento de retiro</span>
+                        <strong>{{ receiptStay.exitPersonDocument }}</strong>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- TIEMPO -->
+            <div class="receipt-section">
+                <h3>Tiempo de permanencia</h3>
+
+                <div class="receipt-grid">
+
+                    <div>
+                        <span>Fecha de ingreso</span>
+                        <strong>
+                            {{ receiptStay.entryAt | date:'dd/MM/yyyy HH:mm' }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Fecha de salida</span>
+                        <strong>
+                            {{ receiptStay.exitAt | date:'dd/MM/yyyy HH:mm' }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Tiempo transcurrido</span>
+                        <strong>
+                            {{ getReceiptDuration(receiptStay) }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Horas cobradas</span>
+                        <strong>
+                            {{ receiptStay.billedHours ?? 0 }} horas
+                        </strong>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- INFORMACIÓN DEL PAGO -->
+            <div class="receipt-section">
+                <h3>Información del pago</h3>
+
+                <div class="receipt-grid">
+
+                    <div>
+                        <span>Estado del pago</span>
+                        <strong>
+                            {{ receiptStay.paymentStatus === 'PAID' ? 'Pagado' : 'Sin registro' }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Medio de pago</span>
+                        <strong>
+                            {{ getPaymentMethodLabel(receiptStay.paymentMethod) }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Fecha del pago</span>
+                        <strong>
+                            {{ receiptStay.paymentRecordedAt | date:'dd/MM/yyyy HH:mm' }}
+                        </strong>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- TOTAL -->
+            <div class="receipt-total">
+
+                <span>TOTAL A PAGAR</span>
+
+                <strong>
+                    {{ formatCurrency(receiptStay.chargedAmount ?? 0) }}
+                </strong>
+
+                <small>Moneda: pesos colombianos (COP)</small>
+
+            </div>
+
+        </div>
+
+        <footer class="modal-actions">
+            <button type="button" class="btn btn-primary" (click)="closeReceiptModal()">
+                Finalizar
+            </button>
+        </footer>
+
+    </section>
+
+</div>
+}

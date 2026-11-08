@@ -1,0 +1,321 @@
+<div class="page-container">
+
+    <div class="page-header">
+        <div>
+            <h1>Residentes</h1>
+            <p>Administra los residentes del conjunto residencial.</p>
+        </div>
+
+        <button class="btn-primary" (click)="openCreateForm()">
+            + Nuevo residente
+        </button>
+    </div>
+
+    @if (successMessage) {
+    <div class="alert success">{{ successMessage }}</div>
+    }
+
+    @if (errorMessage && !showForm) {
+    <div class="alert error">{{ errorMessage }}</div>
+    }
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+            <span class="stat-label">Total residentes</span>
+            <strong>{{ residents.length }}</strong>
+            <span class="stat-icon">♙</span>
+        </div>
+
+        <div class="stat-card">
+            <span class="stat-label">Activos</span>
+            <strong>{{ activeCount }}</strong>
+            <span class="stat-icon green">✓</span>
+        </div>
+
+        <div class="stat-card">
+            <span class="stat-label">Inactivos</span>
+            <strong>{{ inactiveCount }}</strong>
+            <span class="stat-icon red">○</span>
+        </div>
+
+    </div>
+
+    <div class="content-card">
+
+        <div class="toolbar">
+            <div>
+                <h2>Listado de residentes</h2>
+                <p>Consulta y administra la información registrada.</p>
+            </div>
+
+            <input type="text" placeholder="Buscar por residente, apartamento o placa..." [(ngModel)]="searchTerm"
+                class="search-input" />
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Residente</th>
+                        <th>Documento</th>
+                        <th>Teléfono</th>
+                        <th>Apartamento</th>
+                        <th>Vehículo(s)</th>
+                        <th>Fecha de registro</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @for (resident of filteredResidents; track resident.id) {
+                    <tr>
+                        <td>
+                            <div class="resident-info">
+                                <div class="avatar">
+                                    {{ resident.fullName.charAt(0).toUpperCase() }}
+                                </div>
+
+                                <div>
+                                    <strong>{{ resident.fullName }}</strong>
+                                    <small>
+                                        {{ resident.building || 'Sin torre o bloque' }}
+                                    </small>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>{{ resident.documentNumber }}</td>
+                        <td>{{ resident.phone || 'No registrado' }}</td>
+
+                        <td>
+                            <span class="apartment-badge">
+                                {{ resident.apartment }}
+                            </span>
+                        </td>
+
+                        <td>
+                            @for (vehicle of getVehiclesForResident(resident); track vehicle.id) {
+                            <div>
+                                <strong>{{ vehicle.plate }}</strong>
+                                <small>
+                                    {{ vehicle.brand || 'Marca no registrada' }}
+                                    {{ vehicle.model }}
+                                    @if (vehicle.color) {
+                                    · {{ vehicle.color }}
+                                    }
+                                </small>
+                            </div>
+                            } @empty {
+                            <span>No registrado</span>
+                            }
+                        </td>
+
+                        <td>{{ resident.createdAt | date:'dd/MM/yyyy' }}</td>
+
+                        <td>
+                            <span class="status" [class.active]="resident.active" [class.inactive]="!resident.active">
+                                {{ resident.active ? 'Activo' : 'Inactivo' }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="actions">
+                                <button class="btn-edit" (click)="openEditForm(resident)">
+                                    Editar
+                                </button>
+
+                                <button [class.btn-deactivate]="resident.active" [class.btn-activate]="!resident.active"
+                                    (click)="toggleResident(resident)">
+                                    {{ resident.active ? 'Desactivar' : 'Activar' }}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+
+                    @empty {
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div class="empty-icon">♙</div>
+                            <strong>No hay residentes registrados</strong>
+                            <p>
+                                Registra un residente para comenzar a administrar
+                                las asignaciones.
+                            </p>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</div>
+
+@if (showForm) {
+<div class="modal-overlay" (click)="closeForm()">
+
+    <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+            <div>
+                <h2>{{ editingId ? 'Editar residente' : 'Nuevo residente' }}</h2>
+                <p>Registra la información personal, de vivienda y su vehículo.</p>
+            </div>
+
+            <button class="close-button" (click)="closeForm()">×</button>
+        </div>
+
+        @if (errorMessage) {
+        <div class="alert error">{{ errorMessage }}</div>
+        }
+
+        <form (ngSubmit)="saveResident()">
+
+            <div class="form-grid">
+
+                <div class="form-group full">
+                    <label>Nombre completo *</label>
+                    <input type="text" name="fullName" [(ngModel)]="form.fullName" placeholder="Nombre y apellidos"
+                        required />
+                </div>
+
+                <div class="form-group">
+                    <label>Número de cédula *</label>
+                    <input type="text" name="documentNumber" [(ngModel)]="form.documentNumber"
+                        placeholder="Ej. 1234567890" required />
+                </div>
+
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" name="phone" [(ngModel)]="form.phone" placeholder="Número de contacto" />
+                </div>
+
+                <div class="form-group">
+                    <label>Apartamento *</label>
+                    <input type="text" name="apartment" [(ngModel)]="form.apartment" placeholder="Ej. 302" required />
+                </div>
+
+                <div class="form-group">
+                    <label>Torre o bloque</label>
+                    <input type="text" name="building" [(ngModel)]="form.building" placeholder="Ej. Torre 2" />
+                </div>
+
+            </div>
+
+            <h3 class="section-title">Vehículo del residente</h3>
+            <p class="form-help">
+                Administra un vehículo por residente. Sus datos se usarán al
+                registrar el ingreso en portería.
+            </p>
+
+            @if (linkedVehiclesForEditing.length > 1) {
+            <div class="form-group">
+                <label>Vehículo existente que deseas administrar</label>
+                <select name="vehicleId" [(ngModel)]="form.vehicleId"
+                    (ngModelChange)="onVehicleSelected($event)">
+                    @for (vehicle of linkedVehiclesForEditing; track vehicle.id) {
+                    <option [value]="vehicle.id">{{ vehicle.plate }}</option>
+                    }
+                </select>
+                <small>Este residente tiene registros anteriores de más de un vehículo.</small>
+            </div>
+            }
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Placa</label>
+                    <input type="text" name="vehiclePlate" [(ngModel)]="form.vehiclePlate"
+                        placeholder="Ej. ABC123" maxlength="10" />
+                </div>
+
+                <div class="form-group">
+                    <label>Marca</label>
+                    <input type="text" name="vehicleBrand" [(ngModel)]="form.vehicleBrand"
+                        placeholder="Ej. Chevrolet" maxlength="40" />
+                </div>
+
+                <div class="form-group">
+                    <label>Modelo</label>
+                    <input type="text" name="vehicleModel" [(ngModel)]="form.vehicleModel"
+                        placeholder="Ej. Onix" maxlength="40" />
+                </div>
+
+                <div class="form-group">
+                    <label>Color</label>
+                    <input type="text" name="vehicleColor" [(ngModel)]="form.vehicleColor"
+                        placeholder="Ej. Gris" maxlength="30" />
+                </div>
+
+                <div class="form-group">
+                    <label>Estado del vehículo</label>
+                    <select name="vehicleStatus" [(ngModel)]="form.vehicleStatus">
+                        <option value="ACTIVE">Activo</option>
+                        <option value="INACTIVE">Inactivo</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="authorized-header">
+                <div>
+                    <h3 class="section-title">Personas autorizadas</h3>
+                    <p class="form-help">Máximo tres personas adicionales al residente.</p>
+                </div>
+                <button type="button" class="btn-secondary"
+                    [disabled]="form.authorizedPeople.length >= 3" (click)="addAuthorizedPerson()">
+                    + Añadir persona
+                </button>
+            </div>
+
+            @for (person of form.authorizedPeople; track person.id; let i = $index) {
+            <section class="authorized-card">
+                <header class="authorized-card-header">
+                    <strong>Persona autorizada {{ i + 1 }}</strong>
+                    <button type="button" class="btn-deactivate"
+                        (click)="removeAuthorizedPerson(i)">Quitar</button>
+                </header>
+
+                <div class="form-grid">
+                    <div class="form-group full">
+                        <label>Nombre completo *</label>
+                        <input [name]="'authorizedName' + i" [(ngModel)]="person.fullName"
+                            placeholder="Nombre y apellidos" required maxlength="120" />
+                    </div>
+                    <div class="form-group">
+                        <label>Cédula *</label>
+                        <input [name]="'authorizedDocument' + i" [(ngModel)]="person.documentNumber"
+                            placeholder="Número de documento" required maxlength="30" />
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input [name]="'authorizedPhone' + i" [(ngModel)]="person.phone"
+                            placeholder="Número de contacto" maxlength="25" />
+                    </div>
+                </div>
+            </section>
+            }
+
+            @if (form.vehicleId) {
+            <button type="button" class="btn-deactivate" (click)="removeVehicle()">
+                Quitar vehículo de este residente
+            </button>
+            }
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" (click)="closeForm()">
+                    Cancelar
+                </button>
+
+                <button type="submit" class="btn-primary">
+                    {{ editingId ? 'Guardar cambios' : 'Registrar residente' }}
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+}

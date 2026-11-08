@@ -1,0 +1,90 @@
+<div class="page-container">
+
+    <div class="page-header">
+        <div>
+            <h1>Configuración</h1>
+            <p>Administra el funcionamiento general de ParkControl.</p>
+        </div>
+    </div>
+
+    <section class="settings-card">
+
+        <div class="section-heading">
+            <div class="heading-icon">⚙</div>
+            <div>
+                <h2>Modo de funcionamiento</h2>
+                <p>Selecciona el tipo de establecimiento que utilizará ParkControl.</p>
+            </div>
+        </div>
+
+        <div class="mode-options">
+
+            <button type="button" class="mode-option" [class.selected]="modeService.isResidential()"
+                (click)="changeMode('RESIDENTIAL')">
+
+                <div class="mode-icon residential">🏢</div>
+
+                <div class="mode-content">
+                    <h3>Conjunto residencial</h3>
+                    <p>
+                        Administración de residentes, apartamentos,
+                        vehículos autorizados y visitantes.
+                    </p>
+                </div>
+
+                <span class="mode-check">
+                    {{ modeService.isResidential() ? '✓' : '' }}
+                </span>
+
+            </button>
+
+            <button type="button" class="mode-option" [class.selected]="modeService.isPublic()"
+                (click)="changeMode('PUBLIC')">
+
+                <div class="mode-icon public">🚘</div>
+
+                <div class="mode-content">
+                    <h3>Parqueadero público</h3>
+                    <p>
+                        Administración de clientes, vehículos,
+                        tarifas, permanencia y cobros.
+                    </p>
+                </div>
+
+                <span class="mode-check">
+                    {{ modeService.isPublic() ? '✓' : '' }}
+                </span>
+
+            </button>
+
+        </div>
+
+        <div class="current-mode">
+            <span class="status-dot"></span>
+            <span>
+                Modo actual:
+                <strong>
+                    {{ modeService.isResidential()
+                    ? 'Conjunto residencial'
+                    : 'Parqueadero público' }}
+                </strong>
+            </span>
+        </div>
+
+    </section>
+
+    <section class="information-card">
+        <div class="info-icon">ℹ</div>
+        <div>
+            <h3>Información importante</h3>
+            <p>
+                Cambiar el modo no elimina los registros existentes.
+                Cada modo conserva sus propios registros y no los comparte
+                con el otro parqueadero.
+                Los recursos ocupados seguirán ocupados hasta que se registre
+                su salida correspondiente.
+            </p>
+        </div>
+    </section>
+
+</div>

@@ -1,0 +1,224 @@
+.tariff-intro {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 22px;
+    margin-bottom: 24px;
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 14px;
+}
+
+.tariff-intro-icon {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: #eaf1ff;
+    color: #2458a6;
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.tariff-intro h2 {
+    margin: 0 0 6px;
+    font-size: 18px;
+}
+
+.tariff-intro p {
+    margin: 0;
+    color: var(--text-secondary, #64748b);
+    font-size: 14px;
+}
+
+.tariff-panel {
+    padding: 24px;
+}
+
+.tariff-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 24px;
+}
+
+.tariff-card {
+    padding: 22px;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 12px;
+    background: var(--surface, #ffffff);
+}
+
+.tariff-card-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: #eef3ff;
+    color: #2458a6;
+    font-size: 25px;
+    margin-bottom: 16px;
+}
+
+.tariff-card h3 {
+    margin: 0 0 8px;
+    font-size: 17px;
+}
+
+.tariff-card p {
+    min-height: 58px;
+    color: var(--text-secondary, #64748b);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.tariff-card label {
+    display: block;
+    margin-top: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.money-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 0 12px;
+    border: 1px solid var(--border, #d1d5db);
+    border-radius: 8px;
+    background: var(--surface, #ffffff);
+}
+
+.money-input span {
+    color: var(--text-secondary, #64748b);
+    font-weight: 600;
+}
+
+.money-input input {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font: inherit;
+}
+
+.tariff-rules {
+    margin-top: 26px;
+    padding: 20px;
+    border-radius: 12px;
+    background: var(--surface-secondary, #f8fafc);
+}
+
+.tariff-rules h3,
+.tariff-preview h3 {
+    margin: 0 0 16px;
+    font-size: 16px;
+}
+
+.rule-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    font-size: 14px;
+}
+
+.rule-row:last-child {
+    border-bottom: 0;
+}
+
+.rule-row span {
+    color: var(--text-secondary, #64748b);
+}
+
+.rule-row strong {
+    text-align: right;
+}
+
+.tariff-preview {
+    margin-top: 22px;
+    padding: 20px;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 12px;
+}
+
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.preview-grid div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.preview-grid span {
+    color: var(--text-secondary, #64748b);
+    font-size: 13px;
+}
+
+.preview-grid strong {
+    font-size: 20px;
+}
+
+.tariff-preview>p {
+    margin: 18px 0 0;
+    color: var(--text-secondary, #64748b);
+    font-size: 13px;
+}
+
+.tariff-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.last-update {
+    color: var(--text-secondary, #64748b);
+    font-size: 12px;
+}
+
+@media (max-width: 900px) {
+    .tariff-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .tariff-grid,
+    .preview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tariff-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .tariff-actions button {
+        width: 100%;
+    }
+
+    .rule-row {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .rule-row strong {
+        text-align: left;
+    }
+}

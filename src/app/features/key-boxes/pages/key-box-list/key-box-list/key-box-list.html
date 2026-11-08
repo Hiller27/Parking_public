@@ -1,0 +1,207 @@
+<div class="page-heading">
+    <div>
+        <h1>Cajas digitales</h1>
+        <p>Administra las cajas destinadas a custodiar las llaves de los vehículos.</p>
+    </div>
+
+    <button class="primary-button" (click)="openCreateForm()">
+        <span>＋</span> Nueva caja
+    </button>
+</div>
+
+@if (successMessage) {
+<div class="alert success-alert">{{ successMessage }}</div>
+}
+
+@if (errorMessage && !formOpen) {
+<div class="alert error-alert">{{ errorMessage }}</div>
+}
+
+<section class="stats-grid">
+    <article class="stat-card">
+        <span class="stat-label">Total de cajas</span>
+        <strong>{{ boxes.length }}</strong>
+        <span class="stat-description">Cajas registradas</span>
+    </article>
+
+    <article class="stat-card">
+        <span class="stat-label">Disponibles</span>
+        <strong class="green-text">{{ availableCount }}</strong>
+        <span class="stat-description">Listas para utilizar</span>
+    </article>
+
+    <article class="stat-card">
+        <span class="stat-label">Ocupadas</span>
+        <strong class="blue-text">{{ occupiedCount }}</strong>
+        <span class="stat-description">Con llaves asignadas</span>
+    </article>
+
+    <article class="stat-card">
+        <span class="stat-label">Fuera de servicio</span>
+        <strong class="orange-text">{{ outOfServiceCount }}</strong>
+        <span class="stat-description">No disponibles</span>
+    </article>
+</section>
+
+<section class="table-panel">
+    <div class="panel-heading">
+        <div>
+            <h2>Listado de cajas</h2>
+            <p>Consulta y administra los compartimentos registrados.</p>
+        </div>
+        <span class="total-badge">{{ filteredBoxes.length }} resultados</span>
+    </div>
+
+    <div class="filters">
+        <div class="search-box">
+            <span>⌕</span>
+            <input type="search" [(ngModel)]="searchTerm" placeholder="Buscar por código, ubicación o compartimento..."
+                aria-label="Buscar cajas" />
+        </div>
+
+        <select [(ngModel)]="statusFilter" aria-label="Filtrar por estado">
+            <option value="ALL">Todos los estados</option>
+            <option value="AVAILABLE">Disponibles</option>
+            <option value="OCCUPIED">Ocupadas</option>
+            <option value="OUT_OF_SERVICE">Fuera de servicio</option>
+        </select>
+    </div>
+
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>CÓDIGO</th>
+                    <th>UBICACIÓN</th>
+                    <th>COMPARTIMENTO</th>
+                    <th>ESTADO</th>
+                    <th>FECHA DE REGISTRO</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @for (box of filteredBoxes; track box.id) {
+                <tr>
+                    <td>
+                        <span class="box-code">{{ box.code }}</span>
+                    </td>
+                    <td>{{ box.location }}</td>
+                    <td>{{ box.compartmentNumber }}</td>
+                    <td>
+                        <span class="status-badge" [class.available]="box.status === 'AVAILABLE'"
+                            [class.occupied]="box.status === 'OCCUPIED'"
+                            [class.out-of-service]="box.status === 'OUT_OF_SERVICE'">
+                            <span class="status-dot"></span>
+                            {{ statusLabel(box.status) }}
+                        </span>
+                    </td>
+                    <td>{{ box.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>
+                        <div class="row-actions">
+                            <button class="icon-button" type="button" title="Editar caja" aria-label="Editar caja"
+                                (click)="openEditForm(box)">
+                                ✎
+                            </button>
+
+                            <button class="icon-button delete-button" type="button" title="Eliminar caja"
+                                aria-label="Eliminar caja" [disabled]="box.status === 'OCCUPIED'"
+                                (click)="deleteBox(box)">
+                                ×
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                } @empty {
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <span class="empty-icon">▣</span>
+                            <strong>
+                                {{ boxes.length === 0
+                                ? 'Todavía no hay cajas registradas'
+                                : 'No se encontraron resultados' }}
+                            </strong>
+                            <p>
+                                {{ boxes.length === 0
+                                ? 'Registra tu primera caja digital para comenzar.'
+                                : 'Prueba con otra búsqueda o cambia el filtro.' }}
+                            </p>
+                            @if (boxes.length === 0) {
+                            <button class="primary-button" (click)="openCreateForm()">
+                                Registrar primera caja
+                            </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@if (formOpen) {
+<div class="modal-backdrop" (click)="closeForm()">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="form-title"
+        (click)="$event.stopPropagation()">
+
+        <div class="modal-heading">
+            <div>
+                <h2 id="form-title">
+                    {{ editingId ? 'Editar caja digital' : 'Registrar caja digital' }}
+                </h2>
+                <p>Completa los datos del compartimento.</p>
+            </div>
+
+            <button class="close-button" type="button" aria-label="Cerrar formulario" (click)="closeForm()">×</button>
+        </div>
+
+        @if (errorMessage) {
+        <div class="alert error-alert">{{ errorMessage }}</div>
+        }
+
+        <form #boxForm="ngForm" (ngSubmit)="saveBox()">
+            <div class="form-field">
+                <label for="box-code">Código de la caja *</label>
+                <input id="box-code" name="code" [(ngModel)]="form.code" placeholder="Ej. CAJ-001" maxlength="30"
+                    required />
+                <small>Utiliza un código único para identificar cada caja.</small>
+            </div>
+
+            <div class="form-field">
+                <label for="box-location">Ubicación *</label>
+                <input id="box-location" name="location" [(ngModel)]="form.location"
+                    placeholder="Ej. Recepción principal" maxlength="100" required />
+            </div>
+
+            <div class="form-field">
+                <label for="box-compartment">Número de compartimento *</label>
+                <input id="box-compartment" name="compartmentNumber" [(ngModel)]="form.compartmentNumber"
+                    placeholder="Ej. 01" maxlength="30" required />
+            </div>
+
+            <div class="form-field">
+                <label for="box-status">Estado</label>
+                <select id="box-status" name="status" [(ngModel)]="form.status"
+                    [disabled]="editingId !== null && form.status === 'OCCUPIED'">
+                    <option value="AVAILABLE">Disponible</option>
+                    <option value="OCCUPIED">Ocupada</option>
+                    <option value="OUT_OF_SERVICE">Fuera de servicio</option>
+                </select>
+                <small>Las cajas ocupadas se liberarán desde el proceso de salida.</small>
+            </div>
+
+            <div class="modal-actions">
+                <button class="secondary-button" type="button" (click)="closeForm()">
+                    Cancelar
+                </button>
+
+                <button class="primary-button" type="submit" [disabled]="boxForm.invalid">
+                    {{ editingId ? 'Guardar cambios' : 'Registrar caja' }}
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
+}

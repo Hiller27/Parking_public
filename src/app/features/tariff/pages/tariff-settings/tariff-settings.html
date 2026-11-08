@@ -1,0 +1,205 @@
+<section class="page">
+
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">CONFIGURACIÓN DEL PARQUEADERO</p>
+            <h1>Tarifas y cobros</h1>
+            <p class="subtitle">
+                Administra los valores que se aplicarán a los vehículos
+                del parqueadero público.
+            </p>
+        </div>
+    </header>
+
+    @if (successMessage) {
+    <div class="alert alert-success" role="status">
+        {{ successMessage }}
+    </div>
+    }
+
+    @if (errorMessage) {
+    <div class="alert alert-error" role="alert">
+        {{ errorMessage }}
+    </div>
+    }
+
+    <div class="tariff-intro">
+        <div class="tariff-intro-icon">
+            <span> $ </span>
+        </div>
+
+        <div>
+            <h2>Configuración de precios</h2>
+            <p>
+                Moneda: pesos colombianos (COP).
+                Las tarifas se aplican únicamente al parqueadero público.
+            </p>
+        </div>
+    </div>
+
+    <form (ngSubmit)="saveSettings()">
+
+        <section class="panel tariff-panel">
+
+            <div class="panel-header">
+                <div>
+                    <h2>Tarifas de estacionamiento</h2>
+                    <p>Define los valores que utilizará el sistema.</p>
+                </div>
+            </div>
+
+            <div class="tariff-grid">
+
+                <article class="tariff-card">
+
+                    <div class="tariff-card-icon">
+                        <span>◷</span>
+                    </div>
+
+                    <h3>Tarifa por hora</h3>
+
+                    <p>
+                        Valor que se cobra por cada hora iniciada
+                        o fracción de hora.
+                    </p>
+
+                    <label>
+                        Valor por hora *
+                        <div class="money-input">
+                            <span>$</span>
+                            <input type="number" name="hourlyRate" [(ngModel)]="settings.hourlyRate" min="1" step="100"
+                                required placeholder="Ej. 3000" />
+                        </div>
+                    </label>
+
+                </article>
+
+                <article class="tariff-card">
+
+                    <div class="tariff-card-icon">
+                        <span>▦</span>
+                    </div>
+
+                    <h3>Tope diario</h3>
+
+                    <p>
+                        Valor máximo que se cobrará por cada periodo
+                        de 24 horas.
+                    </p>
+
+                    <label>
+                        Valor máximo diario *
+                        <div class="money-input">
+                            <span>$</span>
+                            <input type="number" name="dailyCap" [(ngModel)]="settings.dailyCap" min="1" step="100"
+                                required placeholder="Ej. 20000" />
+                        </div>
+                    </label>
+
+                </article>
+
+                <article class="tariff-card">
+
+                    <div class="tariff-card-icon">
+                        <span>▣</span>
+                    </div>
+
+                    <h3>Tarifa mensual</h3>
+
+                    <p>
+                        Precio de referencia para planes de
+                        estacionamiento mensual.
+                    </p>
+
+                    <label>
+                        Valor mensual
+                        <div class="money-input">
+                            <span>$</span>
+                            <input type="number" name="monthlyRate" [(ngModel)]="settings.monthlyRate" min="0"
+                                step="1000" placeholder="Ej. 250000" />
+                        </div>
+                    </label>
+
+                </article>
+
+            </div>
+
+            <div class="tariff-rules">
+
+                <h3>Reglas de cobro actuales</h3>
+
+                <div class="rule-row">
+                    <span>Tipo de cálculo</span>
+                    <strong>Por hora o fracción</strong>
+                </div>
+
+                <div class="rule-row">
+                    <span>Minutos de gracia</span>
+                    <strong>0 minutos</strong>
+                </div>
+
+                <div class="rule-row">
+                    <span>Tope diario</span>
+                    <strong>Aplicar tarifa máxima diaria</strong>
+                </div>
+
+            </div>
+
+            <div class="tariff-preview">
+
+                <h3>Vista previa de configuración</h3>
+
+                <div class="preview-grid">
+
+                    <div>
+                        <span>Una hora</span>
+                        <strong>
+                            {{ formatCurrency(settings.hourlyRate) }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Tope diario</span>
+                        <strong>
+                            {{ formatCurrency(settings.dailyCap) }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Mensualidad</span>
+                        <strong>
+                            {{ formatCurrency(settings.monthlyRate) }}
+                        </strong>
+                    </div>
+
+                </div>
+
+                <p>
+                    El límite diario equivale aproximadamente a
+                    {{ dailyEquivalent }} horas según la tarifa configurada.
+                </p>
+
+            </div>
+
+            <footer class="tariff-actions">
+
+                <span class="last-update">
+                    @if (settings.updatedAt) {
+                    Última actualización:
+                    {{ settings.updatedAt | date:'dd/MM/yyyy HH:mm' }}
+                    } @else {
+                    Todavía no has guardado tarifas.
+                    }
+                </span>
+
+                <button type="submit" class="btn btn-primary">
+                    Guardar tarifas
+                </button>
+
+            </footer>
+
+        </section>
+
+    </form>
+
+</section>

@@ -1,0 +1,227 @@
+<section class="page">
+    <header class="page-header">
+        <div>
+            <p class="eyebrow">CONSULTAS Y REPORTES</p>
+            <h1>Historial de ingresos y salidas</h1>
+            <p class="subtitle">
+                Consulta las estancias, los cobros y los medios de pago registrados.
+            </p>
+        </div>
+
+        <button type="button" class="btn btn-primary" (click)="exportCsv()">
+            Exportar CSV
+        </button>
+    </header>
+
+    @if (errorMessage) {
+    <div class="alert alert-error" role="alert">
+        {{ errorMessage }}
+    </div>
+    }
+
+    <div class="stats-grid">
+        <article class="stat-card">
+            <span class="stat-label">Total de estancias</span>
+            <strong>{{ totalCount }}</strong>
+            <span class="stat-description">Ingresos conservados</span>
+        </article>
+
+        <article class="stat-card active">
+            <span class="stat-label">Activas</span>
+            <strong>{{ activeCount }}</strong>
+            <span class="stat-description">Vehículos aún dentro</span>
+        </article>
+
+        <article class="stat-card closed">
+            <span class="stat-label">Cerradas</span>
+            <strong>{{ closedCount }}</strong>
+            <span class="stat-description">Salidas registradas</span>
+        </article>
+    </div>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Registro de estancias</h2>
+                <p>
+                    Consulta los datos de ingreso, salida y pagos realizados.
+                </p>
+            </div>
+
+            <span class="result-count">
+                {{ filteredStays.length }} resultados
+            </span>
+        </div>
+
+        <div class="filters">
+            <label class="search-field">
+                <span>Buscar</span>
+                <input type="search" [(ngModel)]="searchTerm" placeholder="Placa, nombre, cédula, recurso o pago..." />
+            </label>
+
+            <label>
+                Estado
+                <select [(ngModel)]="statusFilter">
+                    <option value="ALL">Todos los estados</option>
+                    <option value="ACTIVE">Activo</option>
+                    <option value="CLOSED">Cerrado</option>
+                </select>
+            </label>
+
+            <label>
+                Desde la fecha de entrada
+                <input type="date" [(ngModel)]="startDate" />
+            </label>
+
+            <label>
+                Hasta la fecha de entrada
+                <input type="date" [(ngModel)]="endDate" />
+            </label>
+
+            <button type="button" class="btn btn-secondary clear-btn" (click)="clearFilters()">
+                Limpiar filtros
+            </button>
+        </div>
+
+        @if (startDate && endDate && startDate > endDate) {
+        <div class="alert alert-error">
+            La fecha inicial no puede ser posterior a la fecha final.
+        </div>
+        }
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Vehículo / responsable</th>
+                        <th>Entrada</th>
+                        <th>Entregó el vehículo</th>
+                        <th>Caja digital</th>
+                        <th>Estacionamiento</th>
+                        <th>Salida</th>
+                        <th>Retiró el vehículo</th>
+                        <th>Estado</th>
+                        <th>Valor cobrado</th>
+                        <th>Medio de pago</th>
+                        <th>Estado del pago</th>
+                        <th>Fecha del pago</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @for (stay of filteredStays; track stay.id) {
+                    <tr>
+                        <td>
+                            <strong>{{ stay.vehiclePlate }}</strong>
+                            <span class="cell-secondary">
+                                {{ stay.ownerName }}
+                            </span>
+                            @if (stay.vehicleBrand || stay.vehicleModel || stay.vehicleColor) {
+                            <span class="cell-secondary">
+                                {{ stay.vehicleBrand }} {{ stay.vehicleModel }}
+                                @if (stay.vehicleColor) {
+                                · {{ stay.vehicleColor }}
+                                }
+                            </span>
+                            }
+                        </td>
+
+                        <td>
+                            {{ stay.entryAt | date:'dd/MM/yyyy' }}
+                            <span class="cell-secondary">
+                                {{ stay.entryAt | date:'HH:mm:ss' }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {{ stay.entryPersonName }}
+                            <span class="cell-secondary">
+                                C.C. {{ stay.entryPersonDocument }}
+                            </span>
+                        </td>
+
+                        <td>{{ stay.keyBoxCode }}</td>
+
+                        <td>{{ stay.parkingSpaceNumber }}</td>
+
+                        <td>
+                            @if (stay.exitAt) {
+                            {{ stay.exitAt | date:'dd/MM/yyyy' }}
+                            <span class="cell-secondary">
+                                {{ stay.exitAt | date:'HH:mm:ss' }}
+                            </span>
+                            } @else {
+                            <span class="muted">Sin salida</span>
+                            }
+                        </td>
+
+                        <td>
+                            @if (stay.exitPersonName) {
+                            {{ stay.exitPersonName }}
+                            <span class="cell-secondary">
+                                C.C. {{ stay.exitPersonDocument }}
+                            </span>
+                            } @else {
+                            <span class="muted">Pendiente</span>
+                            }
+                        </td>
+
+                        <td>
+                            <span class="status" [class.status-active]="stay.status === 'ACTIVE'"
+                                [class.status-closed]="stay.status === 'CLOSED'">
+                                {{ statusLabel(stay.status) }}
+                            </span>
+                        </td>
+
+                        <td>
+                            @if (stay.operationMode === 'PUBLIC' && stay.status === 'CLOSED') {
+                            <strong>{{ formatCurrency(stay.chargedAmount) }}</strong>
+                            } @else {
+                            <span class="muted">No aplica</span>
+                            }
+                        </td>
+
+                        <td>
+                            @if (stay.operationMode === 'PUBLIC' && stay.status === 'CLOSED') {
+                            {{ getPaymentMethodLabel(stay.paymentMethod) }}
+                            } @else {
+                            <span class="muted">No aplica</span>
+                            }
+                        </td>
+
+                        <td>
+                            @if (stay.operationMode === 'PUBLIC' && stay.status === 'CLOSED') {
+                            <span class="status status-closed">
+                                {{ paymentStatusLabel(stay) }}
+                            </span>
+                            } @else {
+                            <span class="muted">No aplica</span>
+                            }
+                        </td>
+
+                        <td>
+                            @if (stay.paymentRecordedAt) {
+                            {{ stay.paymentRecordedAt | date:'dd/MM/yyyy' }}
+                            <span class="cell-secondary">
+                                {{ stay.paymentRecordedAt | date:'HH:mm:ss' }}
+                            </span>
+                            } @else {
+                            <span class="muted">No registrado</span>
+                            }
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="12" class="empty-state">
+                            <strong>No se encontraron estancias</strong>
+                            <p>
+                                Prueba con otros filtros o registra un nuevo ingreso.
+                            </p>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>

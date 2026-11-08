@@ -1,0 +1,269 @@
+<div class="page-container">
+
+    <div class="page-header">
+        <div>
+            <h1>Asignaciones temporales</h1>
+            <p>Administra los vehículos autorizados para residentes.</p>
+        </div>
+
+        <button class="btn-primary" (click)="openForm()"
+            [disabled]="residents.length === 0 || vehicles.length === 0 || keyBoxes.length === 0 || parkingSpaces.length === 0">
+            + Nueva asignación
+        </button>
+    </div>
+
+    @if (successMessage) {
+    <div class="alert success">{{ successMessage }}</div>
+    }
+
+    @if (errorMessage && !showForm) {
+    <div class="alert error">{{ errorMessage }}</div>
+    }
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+            <span>Asignaciones activas</span>
+            <strong>{{ activeCount }}</strong>
+            <small>Dentro del período autorizado</small>
+        </div>
+
+        <div class="stat-card">
+            <span>Asignaciones vencidas</span>
+            <strong>{{ expiredCount }}</strong>
+            <small>Ya superaron su fecha límite</small>
+        </div>
+
+        <div class="stat-card">
+            <span>Asignaciones finalizadas</span>
+            <strong>{{ endedCount }}</strong>
+            <small>Finalizadas manualmente</small>
+        </div>
+
+    </div>
+
+    <div class="content-card">
+
+        <div class="toolbar">
+            <div>
+                <h2>Registro de asignaciones</h2>
+                <p>Consulta los permisos temporales de los vehículos.</p>
+            </div>
+
+            <div class="filters">
+                <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar residente, placa o apartamento..." />
+
+                <select [(ngModel)]="statusFilter">
+                    <option value="ALL">Todos los estados</option>
+                    <option value="ACTIVE">Activas</option>
+                    <option value="EXPIRED">Vencidas</option>
+                    <option value="ENDED">Finalizadas</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Residente</th>
+                        <th>Apartamento</th>
+                        <th>Vehículo</th>
+                        <th>Caja / estacionamiento</th>
+                        <th>Inicio</th>
+                        <th>Vencimiento</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @for (item of filteredAssignments; track item.id) {
+                    <tr>
+                        <td>
+                            <strong>{{ item.residentName }}</strong>
+                            <small>{{ item.residentDocument }}</small>
+                        </td>
+
+                        <td>
+                            {{ item.building || 'Sin torre' }} -
+                            {{ item.apartment }}
+                        </td>
+
+                        <td>
+                            <span class="plate">{{ item.vehiclePlate }}</span>
+                        </td>
+
+                        <td>
+                            {{ item.keyBoxCode || 'Sin caja' }} /
+                            {{ item.parkingSpaceNumber || 'Sin estacionamiento' }}
+                        </td>
+
+                        <td>{{ item.startDate | date:'dd/MM/yyyy':'UTC' }}</td>
+
+                        <td>{{ item.endDate | date:'dd/MM/yyyy':'UTC' }}</td>
+
+                        <td>
+                            <span class="status" [class.active]="statusClass(item) === 'active'"
+                                [class.expired]="statusClass(item) === 'expired'"
+                                [class.ended]="statusClass(item) === 'ended'">
+                                {{ statusLabel(item) }}
+                            </span>
+                        </td>
+
+                        <td>
+                            @if (item.status === 'ACTIVE' && !assignmentService.isExpired(item)) {
+                            <button class="btn-finish" (click)="endAssignment(item)">
+                                Finalizar
+                            </button>
+                            } @else {
+                            <span class="no-action">—</span>
+                            }
+                        </td>
+                    </tr>
+                    }
+
+                    @empty {
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <strong>No hay asignaciones registradas</strong>
+                            <p>Cuando registres una asignación aparecerá aquí.</p>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</div>
+
+@if (showForm) {
+<div class="modal-overlay" (click)="closeForm()">
+
+    <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+            <div>
+                <h2>Nueva asignación temporal</h2>
+                <p>Autoriza un vehículo para un residente.</p>
+            </div>
+
+            <button class="close-button" (click)="closeForm()">×</button>
+        </div>
+
+        @if (errorMessage) {
+        <div class="alert error">{{ errorMessage }}</div>
+        }
+
+        <form (ngSubmit)="saveAssignment()">
+
+            <div class="form-group">
+                <label>Residente *</label>
+
+                <select name="residentId" [(ngModel)]="form.residentId" (ngModelChange)="onResidentChange()" required>
+                    <option value="">Selecciona un residente</option>
+
+                    @for (resident of residents; track resident.id) {
+                    <option [value]="resident.id">
+                        {{ resident.fullName }} -
+                        {{ resident.building }} {{ resident.apartment }}
+                    </option>
+                    }
+                </select>
+            </div>
+
+            @if (selectedResident) {
+            <div class="resident-preview">
+                <strong>{{ selectedResident.fullName }}</strong>
+                <span>
+                    Cédula: {{ selectedResident.documentNumber }}
+                </span>
+                <span>
+                    Apartamento: {{ selectedResident.building }}
+                    {{ selectedResident.apartment }}
+                </span>
+            </div>
+            }
+
+            <div class="form-group">
+                <label>Vehículo *</label>
+
+                <select name="vehicleId" [(ngModel)]="form.vehicleId" required>
+                    <option value="">Selecciona un vehículo</option>
+
+                    @for (vehicle of residentVehicles; track vehicle.id) {
+                    <option [value]="vehicle.id">
+                        {{ vehicle.plate }} - {{ vehicle.brand }}
+                        {{ vehicle.model }} ({{ vehicle.ownerName }})
+                    </option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Caja fija *</label>
+
+                <select name="keyBoxId" [(ngModel)]="form.keyBoxId" required>
+                    <option value="">Selecciona una caja disponible</option>
+
+                    @for (box of keyBoxes; track box.id) {
+                    <option [value]="box.id">{{ box.code }} - {{ box.location }}</option>
+                    }
+                </select>
+                @if (keyBoxes.length === 0) {
+                <small>No hay cajas disponibles para asignar.</small>
+                }
+            </div>
+
+            <div class="form-group">
+                <label>Estacionamiento fijo *</label>
+
+                <select name="parkingSpaceId" [(ngModel)]="form.parkingSpaceId" required>
+                    <option value="">Selecciona un estacionamiento disponible</option>
+
+                    @for (space of parkingSpaces; track space.id) {
+                    <option [value]="space.id">
+                        {{ space.number }} - {{ space.zone }} {{ space.building }}
+                    </option>
+                    }
+                </select>
+                @if (parkingSpaces.length === 0) {
+                <small>No hay estacionamientos disponibles para asignar.</small>
+                }
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Fecha de inicio *</label>
+                    <input type="date" name="startDate" [(ngModel)]="form.startDate" required />
+                </div>
+
+                <div class="form-group">
+                    <label>Fecha de vencimiento *</label>
+                    <input type="date" name="endDate" [(ngModel)]="form.endDate" [min]="form.startDate" required />
+                </div>
+            </div>
+
+            <div class="info-notice">
+                <strong>Importante:</strong>
+                La asignación no puede superar los tres meses calendario.
+                Al vencer, el registro se conservará en el historial.
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" (click)="closeForm()">
+                    Cancelar
+                </button>
+
+                <button type="submit" class="btn-primary">
+                    Registrar asignación
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+}

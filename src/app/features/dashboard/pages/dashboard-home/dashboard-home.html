@@ -1,0 +1,57 @@
+<div class="page-heading">
+    <div>
+        <h1>Panel principal</h1>
+        <p>Resumen actualizado de la operación del parqueadero.</p>
+    </div>
+</div>
+
+<section class="stats-grid">
+    @for (stat of stats; track stat.title) {
+    <article class="stat-card">
+        <div class="stat-top">
+            <span>{{ stat.title }}</span>
+            <span class="stat-icon" [class]="stat.color">
+                {{ stat.icon }}
+            </span>
+        </div>
+
+        <strong class="stat-value">{{ stat.value }}</strong>
+        <p>{{ stat.description }}</p>
+    </article>
+    }
+</section>
+
+
+<section class="section activity-section">
+    <div class="section-heading">
+        <div>
+            <h2>Actividad reciente</h2>
+            <p>Últimos ingresos registrados.</p>
+        </div>
+    </div>
+
+    @if (recentStays.length > 0) {
+    <div class="activity-list">
+        @for (stay of recentStays; track stay.id) {
+        <article class="activity-item">
+            <div class="activity-details">
+                <strong>{{ stay.vehiclePlate }}</strong>
+                <span>{{ stay.entryPersonName }}</span>
+            </div>
+            <div class="activity-meta">
+                <time [attr.datetime]="stay.entryAt">{{ stay.entryAt | date: 'short' }}</time>
+                <span class="activity-status" [class.active]="stay.status === 'ACTIVE'">
+                    {{ stay.status === 'ACTIVE' ? 'En curso' : 'Finalizada' }}
+                </span>
+            </div>
+        </article>
+        }
+    </div>
+    } @else {
+    <div class="empty-activity">
+        <span class="empty-icon">◷</span>
+        <strong>Aún no hay ingresos registrados</strong>
+        <p>Los ingresos registrados aparecerán aquí.</p>
+    </div>
+    }
+</section>

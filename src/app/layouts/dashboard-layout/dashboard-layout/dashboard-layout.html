@@ -1,0 +1,133 @@
+<div class="app-shell">
+
+    <aside class="sidebar" [class.sidebar-open]="sidebarOpen">
+
+        <!-- LOGO -->
+        <a routerLink="/dashboard" class="brand" (click)="closeSidebar()">
+            <span class="brand-icon">P</span>
+            <span>
+                <strong>ParkControl</strong>
+                <small>Gestión de parqueaderos</small>
+            </span>
+        </a>
+
+        <div class="menu-label">PRINCIPAL</div>
+
+        <nav class="menu">
+
+            <!-- PANEL PRINCIPAL -->
+            <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+                (click)="closeSidebar()">
+                <span>▦</span> Panel principal
+            </a>
+
+            <!-- MÓDULOS COMPARTIDOS -->
+            <div class="menu-label">OPERACIONES</div>
+
+            <a routerLink="/cajas" routerLinkActive="active" (click)="closeSidebar()">
+                <span>▣</span> Cajas digitales
+            </a>
+
+            <a routerLink="/estacionamientos" routerLinkActive="active" (click)="closeSidebar()">
+                <span>▤</span> Estacionamientos
+            </a>
+
+            <a routerLink="/ingresos/activos" routerLinkActive="active" (click)="closeSidebar()">
+                <span>↔</span> Ingresos y salidas
+            </a>
+
+            <a routerLink="/historial" routerLinkActive="active" (click)="closeSidebar()">
+                <span>▤</span> Historial
+            </a>
+
+            <!-- OPCIONES DEL CONJUNTO RESIDENCIAL -->
+            @if (modeService.isResidential()) {
+
+            <div class="menu-label">CONJUNTO RESIDENCIAL</div>
+
+            <a routerLink="/residentes" routerLinkActive="active" (click)="closeSidebar()">
+                <span>♙</span> Residentes
+            </a>
+
+            <a routerLink="/asignaciones" routerLinkActive="active" (click)="closeSidebar()">
+                <span>▣</span> Asignaciones
+            </a>
+
+            }
+
+            <!-- OPCIONES DEL PARQUEADERO PÚBLICO -->
+            @if (modeService.isPublic()) {
+
+            <div class="menu-label">PARQUEADERO PÚBLICO</div>
+
+            <a routerLink="/tarifas" routerLinkActive="active" (click)="closeSidebar()">
+                <span>💲</span> Tarifas
+            </a>
+
+            }
+
+            <!-- CONFIGURACIÓN -->
+            <div class="menu-label">SISTEMA</div>
+
+            <a routerLink="/configuracion" routerLinkActive="active" (click)="closeSidebar()">
+                <span>⚙</span> Configuración
+            </a>
+
+        </nav>
+
+        <!-- INFORMACIÓN INFERIOR -->
+        <div class="sidebar-bottom">
+            <span class="online-dot"></span>
+            <div>
+                <strong>Modo demostración</strong>
+                <small>
+                    {{ modeService.isResidential()
+                    ? 'Conjunto residencial'
+                    : 'Parqueadero público' }}
+                </small>
+            </div>
+        </div>
+
+    </aside>
+
+    <!-- FONDO PARA MENÚ MÓVIL -->
+    <div class="sidebar-overlay" [class.visible]="sidebarOpen" (click)="closeSidebar()">
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-area">
+
+        <header class="topbar">
+
+            <button class="menu-toggle" type="button" (click)="sidebarOpen = !sidebarOpen" aria-label="Abrir menú">
+                ☰
+            </button>
+
+            <div class="breadcrumb">
+                <span>ParkControl</span>
+                <span class="separator">/</span>
+                <strong>
+                    {{ modeService.isResidential()
+                    ? 'Conjunto residencial'
+                    : 'Parqueadero público' }}
+                </strong>
+            </div>
+
+            <div class="user-profile">
+                <div class="avatar">VG</div>
+
+                <div class="user-info">
+                    <strong>Vigilancia</strong>
+                    <small>Administrador demo</small>
+                </div>
+            </div>
+
+        </header>
+
+        <section class="page-content">
+            <router-outlet />
+        </section>
+
+    </main>
+
+</div>
