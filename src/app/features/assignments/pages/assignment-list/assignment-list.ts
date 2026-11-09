@@ -2,11 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TemporaryAssignment } from '../../assignment.models';
-import { Vehicle } from '../../../vehicle/vehicle.models';
-import { Resident } from '../../../residents/resident.models';
+import { Resident, ResidentVehicle } from '../../../residents/resident.models';
 import { AssignmentService } from '../../assignment.service';
 import { ResidentService } from '../../../residents/resident.service';
-import { VehicleService } from '../../../vehicle/vehicle.service';
 import { KeyBox } from '../../../key-boxes/key-box.models';
 import { ParkingSpace } from '../../../parking-spaces/parking-space.models';
 
@@ -19,7 +17,6 @@ import { ParkingSpace } from '../../../parking-spaces/parking-space.models';
 export class AssignmentList implements OnInit {
   assignments: TemporaryAssignment[] = [];
   residents: Resident[] = [];
-  vehicles: Vehicle[] = [];
   keyBoxes: KeyBox[] = [];
   parkingSpaces: ParkingSpace[] = [];
 
@@ -41,8 +38,7 @@ export class AssignmentList implements OnInit {
 
   constructor(
     private assignmentService: AssignmentService,
-    private residentService: ResidentService,
-    private vehicleService: VehicleService
+    private residentService: ResidentService
   ) { }
 
   ngOnInit(): void {
@@ -57,10 +53,10 @@ export class AssignmentList implements OnInit {
       );
 
     this.residents = this.residentService.getAll()
-      .filter(resident => resident.active);
-
-    this.vehicles = this.vehicleService.getAll()
-      .filter(vehicle => vehicle.status === 'ACTIVE');
+      .filter(resident =>
+        resident.active &&
+        resident.vehicles?.some(vehicle => vehicle.status === 'ACTIVE')
+      );
 
     this.keyBoxes = this.assignmentService.getAvailableKeyBoxes();
     this.parkingSpaces = this.assignmentService.getAvailableParkingSpaces();
@@ -186,15 +182,10 @@ export class AssignmentList implements OnInit {
     );
   }
 
-  get residentVehicles(): Vehicle[] {
+  get residentVehicles(): ResidentVehicle[] {
     const resident = this.selectedResident;
-    if (!resident) return [];
-
-    return this.vehicles.filter(vehicle =>
-      vehicle.residentId
-        ? vehicle.residentId === resident.id
-        : vehicle.ownerDocument.trim() === resident.documentNumber.trim()
-    );
+    return (resident?.vehicles ?? [])
+      .filter(vehicle => vehicle.status === 'ACTIVE');
   }
 
   onResidentChange(): void {

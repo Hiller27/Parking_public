@@ -3,9 +3,7 @@ import { Injectable } from '@angular/core';
 import { StorageService } from '../../core/storage/storage.service';
 import { ResidentService } from '../residents/resident.service';
 
-
 import { TemporaryAssignment } from './assignment.models';
-import { VehicleService } from '../vehicle/vehicle.service';
 import { OperationModeService } from '../settings/operation-mode.service';
 import { KeyBoxService } from '../key-boxes/key-box.service';
 import { ParkingSpaceService } from '../parking-spaces/parking-space.service';
@@ -21,7 +19,6 @@ export class AssignmentService {
     constructor(
         private storage: StorageService,
         private residentService: ResidentService,
-        private vehicleService: VehicleService,
         private modeService: OperationModeService,
         private keyBoxService: KeyBoxService,
         private parkingSpaceService: ParkingSpaceService
@@ -108,22 +105,15 @@ export class AssignmentService {
         endDate: string;
     }): TemporaryAssignment {
         const resident = this.residentService.getById(data.residentId);
-        const vehicle = this.vehicleService.getById(data.vehicleId);
 
         if (!resident || !resident.active) {
             throw new Error('El residente no existe o está inactivo.');
         }
 
+        const vehicle = resident.vehicles?.find(item => item.id === data.vehicleId);
+
         if (!vehicle || vehicle.status !== 'ACTIVE') {
             throw new Error('El vehículo no existe o está inactivo.');
-        }
-
-        if (
-            vehicle.residentId
-                ? vehicle.residentId !== resident.id
-                : vehicle.ownerDocument.trim() !== resident.documentNumber.trim()
-        ) {
-            throw new Error('El vehículo seleccionado no pertenece al residente.');
         }
 
         if (!data.keyBoxId || !data.parkingSpaceId) {

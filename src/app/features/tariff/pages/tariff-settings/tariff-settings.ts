@@ -16,7 +16,7 @@ import { TariffSettings } from '../../tariff.models';
 export class TariffSettingsPage implements OnInit {
 
   settings: TariffSettings = {
-    hourlyRate: 0,
+    minuteRate: 0,
     dailyCap: 0,
     monthlyRate: 0,
     currency: 'COP',
@@ -44,7 +44,7 @@ export class TariffSettingsPage implements OnInit {
 
     try {
       this.settings = this.tariffService.saveSettings({
-        hourlyRate: this.settings.hourlyRate,
+        minuteRate: this.settings.minuteRate,
         dailyCap: this.settings.dailyCap,
         monthlyRate: this.settings.monthlyRate
       });
@@ -62,15 +62,12 @@ export class TariffSettingsPage implements OnInit {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      maximumFractionDigits: 0
+      maximumFractionDigits: 2
     }).format(value || 0);
   }
 
-  get dailyEquivalent(): number {
-    if (!this.settings.hourlyRate) return 0;
-
-    return Math.ceil(
-      this.settings.dailyCap / this.settings.hourlyRate
-    );
+  get dailyEquivalentMinutes(): number {
+    if (!this.settings.minuteRate) return 0;
+    return Math.ceil(this.settings.dailyCap / this.settings.minuteRate);
   }
 }

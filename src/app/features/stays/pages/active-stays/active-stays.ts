@@ -4,13 +4,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { ParkingSpace } from '../../../parking-spaces/parking-space.models';
-import { Stay, PaymentMethod } from '../../stay.models';
-import { Vehicle } from '../../../vehicle/vehicle.models';
+import { Stay, PaymentMethod, StayVehicleType } from '../../stay.models';
+import { ResidentVehicle } from '../../../residents/resident.models';
 import { KeyBox } from '../../../key-boxes/key-box.models';
 import { Resident } from '../../../residents/resident.models';
 
 import { StayService } from '../../stays.service';
-import { VehicleService } from '../../../vehicle/vehicle.service';
 import { KeyBoxService } from '../../../key-boxes/key-box.service';
 import { ParkingSpaceService } from '../../../parking-spaces/parking-space.service';
 import { OperationModeService } from '../../../settings/operation-mode.service';
@@ -29,7 +28,6 @@ export class ActiveStays implements OnInit {
   readonly modeService = inject(OperationModeService);
 
   stays: Stay[] = [];
-  vehicles: Vehicle[] = [];
   residents: Resident[] = [];
   availableBoxes: KeyBox[] = [];
   availableSpaces: ParkingSpace[] = [];
@@ -54,7 +52,6 @@ export class ActiveStays implements OnInit {
 
   constructor(
     private stayService: StayService,
-    private vehicleService: VehicleService,
     private keyBoxService: KeyBoxService,
     private parkingSpaceService: ParkingSpaceService,
     private residentService: ResidentService,
@@ -69,6 +66,7 @@ export class ActiveStays implements OnInit {
     return {
       residentId: '',
       vehicleId: '',
+      vehicleType: 'CAR' as StayVehicleType,
       vehiclePlate: '',
       vehicleBrand: '',
       vehicleModel: '',
@@ -84,9 +82,6 @@ export class ActiveStays implements OnInit {
     const mode = this.modeService.currentMode();
 
     this.stays = this.stayService.getActive(mode);
-
-    this.vehicles = this.vehicleService.getAll()
-      .filter(vehicle => vehicle.status === 'ACTIVE');
 
     this.residents = this.isResidential
       ? this.residentService.getAll().filter(resident => resident.active)
@@ -104,7 +99,11 @@ export class ActiveStays implements OnInit {
   }
 
   get availableVehicleCount(): number {
-    return this.vehicles.length;
+    return this.residents.reduce(
+      (count, resident) => count + (resident.vehicles ?? [])
+        .filter(vehicle => vehicle.status === 'ACTIVE').length,
+      0
+    );
   }
 
   get isResidential(): boolean {
@@ -115,23 +114,16 @@ export class ActiveStays implements OnInit {
     return this.modeService.isPublic();
   }
 
-  get vehiclesForSelectedResident(): Vehicle[] {
+  get vehiclesForSelectedResident(): ResidentVehicle[] {
     const resident = this.residents.find(
       item => item.id === this.entryForm.residentId
     );
 
-    if (!resident) {
-      return [];
-    }
-
-    return this.vehicles.filter(vehicle =>
-      vehicle.residentId
-        ? vehicle.residentId === resident.id
-        : vehicle.ownerDocument.trim() === resident.documentNumber.trim()
-    );
+    return (resident?.vehicles ?? [])
+      .filter(vehicle => vehicle.status === 'ACTIVE');
   }
 
-  get selectedEntryVehicle(): Vehicle | undefined {
+  get selectedEntryVehicle(): ResidentVehicle | undefined {
     return this.vehiclesForSelectedResident.find(
       vehicle => vehicle.id === this.entryForm.vehicleId
     );
@@ -152,12 +144,8 @@ export class ActiveStays implements OnInit {
   onResidentSelected(residentId: string): void {
     this.assignmentNotice = '';
     const resident = this.residents.find(item => item.id === residentId);
-    const residentVehicles = this.vehicles.filter(vehicle =>
-      vehicle.residentId
-        ? vehicle.residentId === residentId
-        : resident &&
-          vehicle.ownerDocument.trim() === resident.documentNumber.trim()
-    );
+    const residentVehicles = (resident?.vehicles ?? [])
+      .filter(vehicle => vehicle.status === 'ACTIVE');
     const vehicle = residentVehicles[0];
 
     this.entryForm = {
@@ -174,9 +162,6 @@ export class ActiveStays implements OnInit {
   }
 
   onEntryVehicleSelected(vehicleId: string): void {
-    const vehicle = this.vehiclesForSelectedResident.find(
-      item => item.id === vehicleId
-    );
     const resident = this.residents.find(
       item => item.id === this.entryForm.residentId
     );
@@ -184,8 +169,8 @@ export class ActiveStays implements OnInit {
     this.entryForm = {
       ...this.entryForm,
       vehicleId,
-      entryPersonName: vehicle?.ownerName ?? resident?.fullName ?? '',
-      entryPersonDocument: vehicle?.ownerDocument ?? resident?.documentNumber ?? '',
+      entryPersonName: resident?.fullName ?? '',
+      entryPersonDocument: resident?.documentNumber ?? '',
       keyBoxId: '',
       parkingSpaceId: ''
     };
@@ -256,6 +241,7 @@ export class ActiveStays implements OnInit {
     const vehicleValid = this.isResidential
       ? !!this.entryForm.residentId && !!this.entryForm.vehicleId
       : !!this.entryForm.vehiclePlate.trim() &&
+        !!this.entryForm.vehicleType &&
         !!this.entryForm.vehicleBrand.trim() &&
         !!this.entryForm.vehicleModel.trim();
 
@@ -369,7 +355,7 @@ export class ActiveStays implements OnInit {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      maximumFractionDigits: 0
+      maximumFractionDigits: 2
     }).format(value);
   }
 

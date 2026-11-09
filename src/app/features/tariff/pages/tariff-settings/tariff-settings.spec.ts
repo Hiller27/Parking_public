@@ -1,16 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TariffSettings } from './tariff-settings';
+import { TariffSettingsPage } from './tariff-settings';
 
-describe('TariffSettings', () => {
-  let component: TariffSettings;
-  let fixture: ComponentFixture<TariffSettings>;
+describe('TariffSettingsPage', () => {
+  let component: TariffSettingsPage;
+  let fixture: ComponentFixture<TariffSettingsPage>;
 
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
-      imports: [TariffSettings],
+      imports: [TariffSettingsPage],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(TariffSettings);
+    fixture = TestBed.createComponent(TariffSettingsPage);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

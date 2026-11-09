@@ -114,6 +114,9 @@
                         <td>
                             <strong>{{ stay.vehiclePlate }}</strong>
                             <span class="cell-secondary">
+                                {{ stay.vehicleType === 'MOTORCYCLE' ? 'Moto' : 'Carro' }}
+                            </span>
+                            <span class="cell-secondary">
                                 {{ stay.ownerName }}
                             </span>
                             @if (stay.vehicleBrand || stay.vehicleModel || stay.vehicleColor) {

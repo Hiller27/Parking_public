@@ -3,8 +3,12 @@ import { Resident } from '../../resident.models';
 import { ResidentService } from '../../resident.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AuthorizedPerson, Vehicle, VehicleStatus } from '../../../vehicle/vehicle.models';
-import { VehicleService } from '../../../vehicle/vehicle.service';
+import {
+  AuthorizedPerson,
+  ResidentVehicle,
+  ResidentVehicleType,
+  VehicleStatus
+} from '../../resident.models';
 import { StayService } from '../../../stays/stays.service';
 @Component({
   imports: [CommonModule, FormsModule],
@@ -14,7 +18,6 @@ import { StayService } from '../../../stays/stays.service';
 })
 export class ResidentList implements OnInit {
   residents: Resident[] = [];
-  vehicles: Vehicle[] = [];
 
   searchTerm = '';
   showForm = false;
@@ -31,6 +34,7 @@ export class ResidentList implements OnInit {
     building: '',
     vehicleId: '',
     vehiclePlate: '',
+    vehicleType: 'CAR' as ResidentVehicleType,
     vehicleBrand: '',
     vehicleModel: '',
     vehicleColor: '',
@@ -40,7 +44,6 @@ export class ResidentList implements OnInit {
 
   constructor(
     private residentService: ResidentService,
-    private vehicleService: VehicleService,
     private stayService: StayService
   ) { }
 
@@ -51,7 +54,10 @@ export class ResidentList implements OnInit {
   loadResidents(): void {
     this.residents = this.residentService.getAll()
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
-    this.vehicles = this.vehicleService.getAll();
+  }
+
+  get vehicles(): ResidentVehicle[] {
+    return this.residents.flatMap(resident => resident.vehicles ?? []);
   }
 
   get filteredResidents(): Resident[] {
@@ -76,15 +82,11 @@ export class ResidentList implements OnInit {
     );
   }
 
-  getVehiclesForResident(resident: Resident): Vehicle[] {
-    return this.vehicles.filter(vehicle =>
-      vehicle.residentId
-        ? vehicle.residentId === resident.id
-        : vehicle.ownerDocument.trim() === resident.documentNumber.trim()
-    );
+  getVehiclesForResident(resident: Resident): ResidentVehicle[] {
+    return resident.vehicles ?? [];
   }
 
-  get linkedVehiclesForEditing(): Vehicle[] {
+  get linkedVehiclesForEditing(): ResidentVehicle[] {
     const resident = this.editingId
       ? this.residentService.getById(this.editingId)
       : undefined;
@@ -102,6 +104,7 @@ export class ResidentList implements OnInit {
       ...this.form,
       vehicleId: vehicle.id,
       vehiclePlate: vehicle.plate,
+      vehicleType: vehicle.vehicleType ?? 'CAR',
       vehicleBrand: vehicle.brand,
       vehicleModel: vehicle.model,
       vehicleColor: vehicle.color,
@@ -114,6 +117,7 @@ export class ResidentList implements OnInit {
     return {
       vehicleId: '',
       vehiclePlate: '',
+      vehicleType: 'CAR' as ResidentVehicleType,
       vehicleBrand: '',
       vehicleModel: '',
       vehicleColor: '',
@@ -158,6 +162,7 @@ export class ResidentList implements OnInit {
       building: resident.building,
       vehicleId: vehicle?.id ?? '',
       vehiclePlate: vehicle?.plate ?? '',
+      vehicleType: vehicle?.vehicleType ?? 'CAR',
       vehicleBrand: vehicle?.brand ?? '',
       vehicleModel: vehicle?.model ?? '',
       vehicleColor: vehicle?.color ?? '',
@@ -175,124 +180,72 @@ export class ResidentList implements OnInit {
     this.successMessage = '';
 
     try {
-      if (this.editingId) {
-        const currentResident = this.residentService.getById(this.editingId);
-        const linkedVehicles = currentResident
-          ? this.getVehiclesForResident(currentResident)
-          : [];
-        const linkedVehicle = linkedVehicles.find(
-          vehicle => vehicle.id === this.form.vehicleId
-        );
-        const plate = this.form.vehiclePlate.trim().toUpperCase();
-        const hasVehicleDetails = [
-          this.form.vehicleBrand,
-          this.form.vehicleModel,
-          this.form.vehicleColor
-        ].some(value => value.trim()) || this.form.authorizedPeople.length > 0;
+      const plate = this.form.vehiclePlate.trim().toUpperCase();
+      const hasVehicleDetails = [
+        this.form.vehicleBrand,
+        this.form.vehicleModel,
+        this.form.vehicleColor
+      ].some(value => value.trim()) || this.form.authorizedPeople.length > 0;
+      const currentResident = this.editingId
+        ? this.residentService.getById(this.editingId)
+        : undefined;
+      const linkedVehicles = currentResident?.vehicles ?? [];
+      const linkedVehicle = linkedVehicles.find(
+        vehicle => vehicle.id === this.form.vehicleId
+      );
 
-        if (!plate && !linkedVehicle && hasVehicleDetails) {
-          throw new Error('Ingresa la placa para poder registrar los datos del vehículo.');
+      if (!plate && !linkedVehicle && hasVehicleDetails) {
+        throw new Error('Ingresa la placa para poder registrar los datos del vehículo.');
+      }
+
+      if (plate || linkedVehicle) {
+        if (!linkedVehicle && linkedVehicles.length > 0) {
+          throw new Error('Este residente ya tiene un vehículo registrado.');
         }
 
-        if (plate || linkedVehicle) {
-          if (!linkedVehicle && linkedVehicles.length > 0) {
-            throw new Error('Este residente ya tiene un vehículo registrado.');
-          }
-
-          const vehiclePlate = plate || linkedVehicle?.plate;
-          if (!vehiclePlate) {
-            throw new Error('Ingresa la placa del vehículo.');
-          }
-          if (this.vehicles.some(vehicle =>
-            vehicle.id !== linkedVehicle?.id &&
-            vehicle.plate.toUpperCase() === vehiclePlate
-          )) {
-            throw new Error('Ya existe un vehículo con esa placa.');
-          }
-
-          this.vehicleService.validateVehicle({
-            plate: vehiclePlate,
-            ownerName: this.form.fullName,
-            ownerDocument: this.form.documentNumber,
-            authorizedPeople: this.form.authorizedPeople
-          });
+        const vehiclePlate = plate || linkedVehicle?.plate;
+        if (!vehiclePlate) {
+          throw new Error('Ingresa la placa del vehículo.');
         }
 
-        this.residentService.update(this.editingId, this.residentDetails());
-        const updatedResident = this.residentService.getById(this.editingId);
-        if (updatedResident) {
-          if (linkedVehicle) {
-            this.vehicleService.update(linkedVehicle.id, {
-              residentId: updatedResident.id,
-              plate: plate || linkedVehicle.plate,
-              brand: this.form.vehicleBrand,
-              model: this.form.vehicleModel,
-              color: this.form.vehicleColor,
-              ownerName: updatedResident.fullName,
-              ownerDocument: updatedResident.documentNumber,
-              ownerPhone: updatedResident.phone,
-              authorizedPeople: this.form.authorizedPeople,
-              status: this.form.vehicleStatus
-            });
-          } else if (plate) {
-            this.vehicleService.create({
-              residentId: updatedResident.id,
-              plate,
-              brand: this.form.vehicleBrand,
-              model: this.form.vehicleModel,
-              color: this.form.vehicleColor,
-              ownerName: updatedResident.fullName,
-              ownerDocument: updatedResident.documentNumber,
-              ownerPhone: updatedResident.phone,
-              authorizedPeople: this.form.authorizedPeople,
-              status: this.form.vehicleStatus
-            });
-          }
-        }
-        this.successMessage = 'Residente actualizado correctamente.';
-      } else {
-        const plate = this.form.vehiclePlate.trim().toUpperCase();
-        const hasVehicleDetails = [
-          this.form.vehicleBrand,
-          this.form.vehicleModel,
-          this.form.vehicleColor
-        ].some(value => value.trim()) || this.form.authorizedPeople.length > 0;
-
-        if (!plate && hasVehicleDetails) {
-          throw new Error('Ingresa la placa para poder registrar los datos del vehículo.');
-        }
-
-        if (
-          plate &&
-          this.vehicles.some(vehicle => vehicle.plate.toUpperCase() === plate)
-        ) {
+        if (this.vehicles.some(vehicle =>
+          vehicle.id !== linkedVehicle?.id &&
+          vehicle.plate.toUpperCase() === vehiclePlate
+        )) {
           throw new Error('Ya existe un vehículo con esa placa.');
         }
+      }
 
-        if (plate) {
-          this.vehicleService.validateVehicle({
-            plate,
-            ownerName: this.form.fullName,
-            ownerDocument: this.form.documentNumber,
-            authorizedPeople: this.form.authorizedPeople
-          });
-        }
+      let vehicles = [...linkedVehicles];
+      if (plate || linkedVehicle) {
+        const vehicle: ResidentVehicle = {
+          id: linkedVehicle?.id ?? crypto.randomUUID(),
+          plate: plate || linkedVehicle!.plate,
+          vehicleType: this.form.vehicleType,
+          brand: this.form.vehicleBrand,
+          model: this.form.vehicleModel,
+          color: this.form.vehicleColor,
+          authorizedPeople: this.form.authorizedPeople,
+          status: this.form.vehicleStatus,
+          createdAt: linkedVehicle?.createdAt ?? new Date().toISOString()
+        };
 
-        const resident = this.residentService.create(this.residentDetails());
-        if (plate) {
-          this.vehicleService.create({
-            residentId: resident.id,
-            plate,
-            brand: this.form.vehicleBrand,
-            model: this.form.vehicleModel,
-            color: this.form.vehicleColor,
-            ownerName: resident.fullName,
-            ownerDocument: resident.documentNumber,
-            ownerPhone: resident.phone,
-            authorizedPeople: this.form.authorizedPeople,
-            status: this.form.vehicleStatus
-          });
-        }
+        vehicles = linkedVehicle
+          ? vehicles.map(item => item.id === linkedVehicle.id ? vehicle : item)
+          : [...vehicles, vehicle];
+      }
+
+      if (this.editingId) {
+        this.residentService.update(this.editingId, {
+          ...this.residentDetails(),
+          vehicles
+        });
+        this.successMessage = 'Residente actualizado correctamente.';
+      } else {
+        this.residentService.create({
+          ...this.residentDetails(),
+          vehicles
+        });
         this.successMessage = 'Residente registrado correctamente.';
       }
 
@@ -326,8 +279,13 @@ export class ResidentList implements OnInit {
   }
 
   removeVehicle(): void {
-    const vehicle = this.vehicles.find(item => item.id === this.form.vehicleId);
-    if (!vehicle) {
+    const resident = this.editingId
+      ? this.residentService.getById(this.editingId)
+      : undefined;
+    const vehicle = resident?.vehicles?.find(
+      item => item.id === this.form.vehicleId
+    );
+    if (!resident || !vehicle) {
       return;
     }
 
@@ -343,8 +301,11 @@ export class ResidentList implements OnInit {
     }
 
     try {
-      this.vehicleService.delete(vehicle.id);
-      this.vehicles = this.vehicleService.getAll();
+      this.residentService.update(resident.id, {
+        ...this.residentDetails(),
+        vehicles: (resident.vehicles ?? []).filter(item => item.id !== vehicle.id)
+      });
+      this.loadResidents();
       Object.assign(this.form, this.emptyVehicleFields());
       this.errorMessage = '';
       this.successMessage = 'Vehículo retirado correctamente.';

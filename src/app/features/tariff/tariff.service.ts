@@ -12,7 +12,7 @@ export class TariffService {
     private readonly storageKey = 'publicTariffSettings';
 
     private readonly defaultSettings: TariffSettings = {
-        hourlyRate: 0,
+        minuteRate: 0,
         dailyCap: 0,
         monthlyRate: 0,
         currency: 'COP',
@@ -25,33 +25,55 @@ export class TariffService {
     ) { }
 
     getSettings(): TariffSettings {
-        return this.storage.getForMode<TariffSettings>(
+        const saved = this.storage.getForMode<TariffSettings & { hourlyRate?: number }>(
             this.storageKey,
             this.defaultSettings,
             this.modeService.currentMode()
         );
+
+        if (typeof saved.minuteRate === 'number') {
+            return saved;
+        }
+
+        const settings: TariffSettings = {
+            minuteRate: typeof saved.hourlyRate === 'number'
+                ? Math.round((saved.hourlyRate / 60) * 100) / 100
+                : 0,
+            dailyCap: saved.dailyCap ?? 0,
+            monthlyRate: saved.monthlyRate ?? 0,
+            currency: 'COP',
+            updatedAt: saved.updatedAt ?? null
+        };
+
+        this.storage.setForMode(
+            this.storageKey,
+            settings,
+            this.modeService.currentMode()
+        );
+
+        return settings;
     }
 
     saveSettings(data: {
-        hourlyRate: number;
+        minuteRate: number;
         dailyCap: number;
         monthlyRate: number;
     }): TariffSettings {
 
-        const hourlyRate = Number(data.hourlyRate);
+        const minuteRate = Number(data.minuteRate);
         const dailyCap = Number(data.dailyCap);
         const monthlyRate = Number(data.monthlyRate);
 
         if (
-            !Number.isFinite(hourlyRate) ||
+            !Number.isFinite(minuteRate) ||
             !Number.isFinite(dailyCap) ||
             !Number.isFinite(monthlyRate)
         ) {
             throw new Error('Ingresa valores numéricos válidos.');
         }
 
-        if (hourlyRate <= 0) {
-            throw new Error('La tarifa por hora debe ser mayor que cero.');
+        if (minuteRate <= 0) {
+            throw new Error('La tarifa por minuto debe ser mayor que cero.');
         }
 
         if (dailyCap <= 0) {
@@ -63,7 +85,7 @@ export class TariffService {
         }
 
         const settings: TariffSettings = {
-            hourlyRate,
+            minuteRate,
             dailyCap,
             monthlyRate,
             currency: 'COP',

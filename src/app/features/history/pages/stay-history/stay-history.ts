@@ -45,6 +45,7 @@ export class StayHistory implements OnInit {
 
       const matchesSearch = [
         stay.vehiclePlate,
+        stay.vehicleType === 'MOTORCYCLE' ? 'moto' : 'carro',
         stay.vehicleBrand ?? '',
         stay.vehicleModel ?? '',
         stay.vehicleColor ?? '',
@@ -126,7 +127,7 @@ export class StayHistory implements OnInit {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      maximumFractionDigits: 0
+      maximumFractionDigits: 2
     }).format(value);
   }
 
@@ -150,6 +151,7 @@ export class StayHistory implements OnInit {
 
     const headers = [
       'Placa',
+      'Tipo de vehículo',
       'Marca',
       'Modelo',
       'Color',
@@ -176,6 +178,7 @@ export class StayHistory implements OnInit {
 
     const lines = rows.map(stay => [
       stay.vehiclePlate,
+      stay.vehicleType === 'MOTORCYCLE' ? 'Moto' : 'Carro',
       stay.vehicleBrand,
       stay.vehicleModel,
       stay.vehicleColor,

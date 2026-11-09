@@ -102,6 +102,9 @@
                     <tr>
                         <td>
                             <strong>{{ stay.vehiclePlate }}</strong>
+                            <small>
+                                {{ stay.vehicleType === 'MOTORCYCLE' ? 'Moto' : 'Carro' }}
+                            </small>
                         </td>
 
                         <td>{{ stay.ownerName }}</td>
@@ -193,7 +196,8 @@
                     @for (vehicle of vehiclesForSelectedResident; track vehicle.id) {
                     <option [value]="vehicle.id">
                         {{ vehicle.plate }} — {{ vehicle.brand }}
-                        {{ vehicle.model }} — {{ vehicle.color || 'Color no registrado' }}
+                        {{ vehicle.model }} — {{ vehicle.vehicleType === 'MOTORCYCLE' ? 'Moto' : 'Carro' }}
+                        — {{ vehicle.color || 'Color no registrado' }}
                     </option>
                     }
                 </select>
@@ -209,6 +213,7 @@
                 <span>Vehículo seleccionado</span>
                 <strong>
                     {{ selectedEntryVehicle.plate }} ·
+                    {{ selectedEntryVehicle.vehicleType === 'MOTORCYCLE' ? 'Moto' : 'Carro' }} ·
                     {{ selectedEntryVehicle.brand || 'Marca no registrada' }}
                     {{ selectedEntryVehicle.model }}
                     @if (selectedEntryVehicle.color) {
@@ -231,6 +236,14 @@
             </label>
 
             <div class="form-grid">
+                <label>
+                    Tipo de vehículo *
+                    <select name="vehicleType" [(ngModel)]="entryForm.vehicleType" required>
+                        <option value="CAR">Carro</option>
+                        <option value="MOTORCYCLE">Moto</option>
+                    </select>
+                </label>
+
                 <label>
                     Marca *
                     <input name="vehicleBrand" [(ngModel)]="entryForm.vehicleBrand" required maxlength="60"
@@ -463,12 +476,12 @@
 
                 <p>
                     El valor se calculará automáticamente al confirmar
-                    la salida, según el tiempo de permanencia y las
+                    la salida, según los minutos de permanencia y las
                     tarifas configuradas.
                 </p>
 
                 <p>
-                    Se cobra por hora iniciada, sin minutos de gracia,
+                    Se cobra por minuto iniciado, sin minutos de gracia,
                     con aplicación del tope diario.
                 </p>
             </div>
@@ -531,8 +544,11 @@
                 <div class="receipt-grid">
 
                     <div>
-                        <span>Placa</span>
-                        <strong>{{ receiptStay.vehiclePlate }}</strong>
+                        <span>Vehículo</span>
+                        <strong>
+                            {{ receiptStay.vehicleType === 'MOTORCYCLE' ? 'Moto' : 'Carro' }}
+                            · {{ receiptStay.vehiclePlate }}
+                        </strong>
                     </div>
 
                     <div>
@@ -605,9 +621,16 @@
                     </div>
 
                     <div>
-                        <span>Horas cobradas</span>
+                        <span>Tarifa por minuto</span>
                         <strong>
-                            {{ receiptStay.billedHours ?? 0 }} horas
+                            {{ formatCurrency(receiptStay.tariffMinuteRate ?? 0) }}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>Minutos cobrados</span>
+                        <strong>
+                            {{ receiptStay.billedMinutes ?? receiptStay.durationMinutes ?? 0 }} minutos
                         </strong>
                     </div>
 

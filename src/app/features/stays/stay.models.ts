@@ -3,6 +3,7 @@ import { OperationMode } from "../settings/operation-mode.models";
 export type StayStatus = 'ACTIVE' | 'CLOSED';
 export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER';
 export type PaymentStatus = 'PAID';
+export type StayVehicleType = 'CAR' | 'MOTORCYCLE';
 
 export interface Stay {
     id: string;
@@ -15,6 +16,7 @@ export interface Stay {
 
     vehicleId: string;
     vehiclePlate: string;
+    vehicleType?: StayVehicleType;
     vehicleBrand?: string;
     vehicleModel?: string;
     vehicleColor?: string;
@@ -39,7 +41,9 @@ export interface Stay {
     // Son opcionales para conservar los registros anteriores.
     chargedAmount?: number;
     billedHours?: number;
+    billedMinutes?: number;
     durationMinutes?: number;
+    tariffMinuteRate?: number;
     tariffHourlyRate?: number;
     tariffDailyCap?: number;
 

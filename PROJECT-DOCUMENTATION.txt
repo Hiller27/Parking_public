@@ -1,0 +1,309 @@
+DOCUMENTACION DEL PROYECTO PARKCONTROL
+======================================
+
+1. DESCRIPCION
+--------------
+ParkControl es una aplicacion web para administrar operaciones de parqueaderos.
+Ofrece dos modos de funcionamiento:
+
+- Conjunto residencial: administra residentes, los vehiculos vinculados a cada
+  residente, las personas autorizadas y las asignaciones temporales de caja y
+  estacionamiento.
+- Parqueadero publico: registra los datos del vehiculo y de la persona al
+  momento de cada ingreso, calcula el cobro al registrar la salida y conserva
+  la informacion en el historial de esa estancia.
+
+La interfaz esta en espanol. La aplicacion esta construida con Angular y guarda
+la informacion localmente en el navegador; actualmente no tiene API ni base de
+datos remota.
+
+2. TECNOLOGIAS Y REQUISITOS
+---------------------------
+- Angular 22 y TypeScript 6.
+- Angular Router, formularios template-driven y RxJS.
+- Vitest para pruebas unitarias, ejecutadas mediante Angular CLI.
+- Express 5 y Angular SSR para renderizado del lado del servidor.
+- Node.js y npm compatibles con las dependencias del proyecto.
+
+3. INSTALACION Y COMANDOS
+-------------------------
+Desde la raiz del proyecto:
+
+  npm install
+      Instala las dependencias definidas en package.json.
+
+  npm start
+      Inicia el servidor de desarrollo Angular.
+      La URL habitual es http://localhost:4200/.
+
+  npm run build
+      Genera la compilacion de produccion, incluyendo los recursos de servidor.
+      La salida se escribe en dist/parking-registration.
+
+  npm run watch
+      Compila en modo desarrollo y vuelve a compilar al detectar cambios.
+
+  npm test -- --watch=false
+      Ejecuta las pruebas unitarias una vez, sin modo interactivo.
+
+  npm run serve:ssr:parking-registration
+      Inicia el servidor SSR generado. Requiere una compilacion previa.
+      El servidor Express usa PORT si esta definida y, de lo contrario, el
+      puerto 4000.
+
+4. ESTRUCTURA DEL CODIGO
+------------------------
+src/
+  main.ts
+      Punto de entrada del navegador; inicia Angular.
+  main.server.ts
+      Punto de entrada de Angular SSR.
+  server.ts
+      Servidor Express que atiende recursos estaticos y solicitudes SSR.
+  styles.css
+      Estilos globales.
+  app/
+    app.ts, app.html, app.css
+      Componente raiz.
+    app.routes.ts
+      Rutas de la aplicacion, con carga diferida de las pantallas.
+    app.config.ts, app.config.server.ts
+      Configuracion de proveedores para navegador y servidor.
+    core/
+      storage/storage.service.ts
+        Persistencia local reactiva y separacion de datos por modo.
+    layouts/
+      dashboard-layout/
+        Barra lateral, encabezado y contenedor de las pantallas.
+    features/
+      access-control/     Servicio de control de acceso.
+      assignments/        Asignaciones temporales residenciales.
+      dashboard/          Resumen de operaciones.
+      history/            Historial y exportacion CSV.
+      key-boxes/          Administracion de cajas para llaves.
+      parking-spaces/     Administracion de estacionamientos.
+      residents/          Residentes y sus datos residenciales.
+      settings/           Modo de operacion.
+      stays/              Ingresos, salidas y estancias.
+      tariff/             Tarifas del modo publico.
+
+Las pantallas de cada modulo suelen estar junto a su plantilla HTML, sus estilos
+y su archivo de pruebas.
+
+5. NAVEGACION
+-------------
+Las rutas se declaran en src/app/app.routes.ts:
+
+  /dashboard             Panel principal.
+  /cajas                 Cajas digitales.
+  /estacionamientos      Espacios de estacionamiento.
+  /ingresos/activos      Registro de ingresos y salidas.
+  /historial             Historial de estancias y exportacion CSV.
+  /residentes            Residentes (opcion del modo residencial).
+  /asignaciones          Asignaciones (opcion del modo residencial).
+  /configuracion         Configuracion del modo de operacion.
+  /tarifas               Tarifas (opcion del modo publico).
+
+La ruta raiz redirige a /dashboard. Las rutas desconocidas tambien redirigen al
+panel.
+
+6. MODOS DE OPERACION
+---------------------
+OperationModeService ofrece los modos RESIDENTIAL y PUBLIC. El modo inicial es
+RESIDENTIAL. El usuario puede cambiarlo en Configuracion y debe confirmar el
+cambio; los registros existentes no se borran.
+
+Los servicios guardan residentes, cajas, estacionamientos, asignaciones,
+estancias y tarifas con claves separadas por modo, por ejemplo:
+
+  RESIDENTIAL:residents
+  PUBLIC:stays
+
+Las preferencias del modo se guardan por separado en parkControlSettings.
+OperationModeService solicita la migracion de datos guardados con el formato
+antiguo al inicializarse.
+
+7. PERSISTENCIA Y DATOS
+-----------------------
+StorageService almacena el estado como JSON en localStorage bajo la clave
+parking-demo-state. Utiliza Angular signals para mantener en memoria el estado
+y notificar cambios. La persistencia esta limitada al navegador y al origen
+actual: limpiar los datos del navegador o usar otro dispositivo/perfil no
+comparte ni recupera esos registros.
+
+El servicio incluye una migracion de datos antiguos que coloca los registros
+existentes bajo el modo actual. Las estancias antiguas se separan por
+operationMode; las estancias sin ese campo se consideran residenciales.
+
+En el flujo residencial, Resident incluye vehicles opcionales. Cada
+ResidentVehicle contiene placa, tipo (carro o moto), marca, modelo, color,
+estado y personas autorizadas. ResidentService convierte los vehiculos legados almacenados en la
+antigua clave vehicles y los incorpora al residente coincidente. Si el vehiculo
+se vincula por residentId, se usa ese identificador; registros antiguos sin
+residentId pueden coincidir por documento del propietario.
+
+En el modo PUBLIC no se crean registros permanentes de residentes ni vehiculos.
+La informacion capturada durante el ingreso queda en Stay y, por tanto, se
+conserva en el historial de la estancia.
+
+8. MODULOS Y REGLAS DE NEGOCIO
+------------------------------
+
+8.1 Residentes y vehiculos residenciales
+    ResidentService permite consultar, crear, editar y activar/desactivar
+    residentes. Cada residente puede contener los datos de sus vehiculos y
+    hasta tres personas autorizadas por vehiculo.
+
+    Se validan los campos requeridos, las placas duplicadas, la cantidad de
+    autorizados y los documentos repetidos entre propietario y autorizados.
+    Las placas se normalizan en mayusculas.
+
+8.2 Asignaciones
+    AssignmentService asocia un residente y uno de sus vehiculos activos con
+    una caja y un espacio disponibles por un periodo. Valida la vigencia, que
+    la fecha final sea posterior a la inicial, que la asignacion no exceda
+    tres meses y que no se solapen periodos del mismo vehiculo ni recursos
+    asignados a otra persona.
+
+    Las asignaciones pueden finalizarse. Una asignacion vencida deja de contar
+    como activa para las operaciones de disponibilidad.
+
+8.3 Cajas digitales
+    KeyBoxService permite crear, actualizar, cambiar estado y eliminar cajas.
+    El codigo se normaliza a mayusculas y no puede duplicarse. Una caja ocupada
+    no puede eliminarse ni liberarse manualmente; se libera al cerrar una
+    estancia.
+
+8.4 Estacionamientos
+    ParkingSpaceService permite crear, actualizar, cambiar estado y eliminar
+    espacios. El numero y edificio se normalizan a mayusculas. La combinacion
+    de numero y edificio no puede duplicarse. Un espacio ocupado se libera al
+    registrar la salida.
+
+8.5 Ingresos y salidas
+    StayService valida datos de ingreso, disponibilidad de los recursos y que
+    no haya otro ingreso activo con la misma placa.
+
+    En RESIDENTIAL, se eligen un residente y un vehiculo activo. El ingreso
+    requiere una asignacion vigente que coincida con el residente, el vehiculo,
+    la caja y el estacionamiento fijos. Al salir, la persona debe ser el
+    residente propietario o alguien autorizado para el vehiculo.
+
+    En PUBLIC, se ingresan la placa, el tipo (carro o moto), la marca y el
+    modelo, ademas de los datos de la persona que entrega el vehiculo. Esos
+    datos se conservan unicamente en la estancia. Los recursos se seleccionan
+    de los disponibles.
+
+    Las estancias se registran como ACTIVE y se cierran como CLOSED. Al cerrar,
+    el sistema valida la persona que retira; para estancias publicas tambien
+    valida el medio de pago, calcula el cobro y libera la caja y el espacio.
+
+8.6 Tarifas y cobros publicos
+    TariffService guarda minuteRate, dailyCap y monthlyRate en COP. La tarifa
+    por minuto y el tope diario deben ser positivos; la tarifa mensual no puede
+    ser negativa. Los valores numericos deben ser finitos.
+
+    Al cerrar una estancia publica, StayService redondea la duracion hacia
+    arriba al minuto y cobra cada minuto iniciado. El tiempo se procesa en
+    bloques de hasta 24 horas; cada bloque cobra el menor valor entre los
+    minutos del bloque por tarifa por minuto y el tope diario. Las tarifas
+    guardadas anteriormente por hora se convierten a su equivalente por minuto.
+    El sistema guarda el monto, los minutos facturados, la duracion y las
+    tarifas aplicadas en la estancia para conservar el detalle historico.
+
+8.7 Historial
+    StayHistory muestra estancias del modo actual y permite filtrar por texto,
+    estado y rango de fechas. Permite exportar los resultados filtrados como
+    archivo CSV separado por punto y coma, con BOM UTF-8.
+
+8.8 Panel
+    DashboardHome muestra conteos de cajas disponibles, estacionamientos
+    libres, vehiculos residenciales activos y asignaciones activas, ademas de
+    las cinco estancias mas recientes.
+
+9. MODELOS PRINCIPALES
+----------------------
+  Resident
+      Datos personales y de vivienda, estado activo y lista opcional de
+      ResidentVehicle.
+
+  ResidentVehicle
+      Identificador, placa, tipo de vehiculo (carro o moto), marca, modelo,
+      color, estado, fecha de creacion y personas autorizadas.
+
+  TemporaryAssignment
+      Residente, vehiculo, caja, estacionamiento, periodo y estado.
+
+  KeyBox
+      Codigo, ubicacion, compartimento y estado AVAILABLE, OCCUPIED u
+      OUT_OF_SERVICE.
+
+  ParkingSpace
+      Numero, zona, edificio y estado AVAILABLE, OCCUPIED, RESERVED u
+      OUT_OF_SERVICE.
+
+  Stay
+      Modo, datos del vehiculo y personas, recursos, fechas, estado y, para
+      operaciones publicas cerradas, informacion de cobro y pago.
+
+  TariffSettings
+      Tarifa por minuto, tope diario, tarifa mensual, moneda y fecha de
+      actualizacion.
+
+10. PRUEBAS Y VALIDACION
+------------------------
+Las pruebas unitarias estan junto a componentes o servicios y cubren areas como
+residentes, ingresos, historial, dashboard, cajas, estacionamientos,
+configuracion y tarifas.
+
+Comandos recomendados:
+
+  npm test -- --watch=false
+      Ejecuta la suite completa.
+
+  npm test -- --watch=false --include=src/app/features/residents/pages/resident-list/resident-list.spec.ts
+      Ejecuta las pruebas del flujo de residentes.
+
+  npm test -- --watch=false --include=src/app/features/stays/pages/active-stays/active-stays.spec.ts
+      Ejecuta las pruebas de ingresos residenciales y publicos.
+
+La compilacion de produccion se comprueba con npm run build.
+
+11. LIMITACIONES Y CONSIDERACIONES
+----------------------------------
+- Los datos de negocio se almacenan en localStorage; no existe sincronizacion
+  entre usuarios o dispositivos ni respaldo remoto.
+- No se implementa autenticacion o autorizacion de usuarios en el estado actual.
+- Los datos de localStorage son accesibles desde el navegador del usuario; la
+  aplicacion es apropiada como demo o uso local, no como almacenamiento seguro
+  de informacion sensible sin una arquitectura backend adecuada.
+- Los estilos de algunas pantallas pueden superar el presupuesto de advertencia
+  configurado en angular.json; el limite de error es mayor.
+- Una ejecucion completa reciente de npm test encontro un fallo ajeno a los
+  flujos descritos: tariff-settings.spec.ts importa TariffSettings, mientras
+  que el componente exporta TariffSettingsPage. Las pruebas focalizadas de
+  residentes, ingresos, asignaciones y dashboard deben ejecutarse por separado
+  hasta corregir esa discrepancia.
+
+12. ARCHIVOS DE REFERENCIA
+--------------------------
+  package.json
+      Scripts y dependencias.
+  angular.json
+      Configuracion de build, servidor y pruebas.
+  src/app/app.routes.ts
+      Mapa de rutas.
+  src/app/core/storage/storage.service.ts
+      Persistencia y migracion general.
+  src/app/features/settings/operation-mode.service.ts
+      Estado y cambio del modo.
+  src/app/features/residents/resident.service.ts
+      Residentes y migracion de vehiculos residenciales legados.
+  src/app/features/assignments/assignment.service.ts
+      Reglas de asignaciones.
+  src/app/features/stays/stays.service.ts
+      Ingresos, salidas y cobros.
+  src/app/features/history/pages/stay-history/stay-history.ts
+      Consulta y exportacion del historial.
+  src/app/features/tariff/tariff.service.ts
+      Configuracion de tarifas.

@@ -3,8 +3,8 @@ import { Component } from '@angular/core';
 import { AssignmentService } from '../../../assignments/assignment.service';
 import { KeyBoxService } from '../../../key-boxes/key-box.service';
 import { ParkingSpaceService } from '../../../parking-spaces/parking-space.service';
+import { ResidentService } from '../../../residents/resident.service';
 import { StayService } from '../../../stays/stays.service';
-import { VehicleService } from '../../../vehicle/vehicle.service';
 
 interface DashboardStat {
   title: string;
@@ -24,7 +24,7 @@ export class DashboardHome {
   constructor(
     private readonly keyBoxService: KeyBoxService,
     private readonly parkingSpaceService: ParkingSpaceService,
-    private readonly vehicleService: VehicleService,
+    private readonly residentService: ResidentService,
     private readonly assignmentService: AssignmentService,
     private readonly stayService: StayService
   ) { }
@@ -32,7 +32,8 @@ export class DashboardHome {
   get stats(): DashboardStat[] {
     const keyBoxes = this.keyBoxService.getAll();
     const parkingSpaces = this.parkingSpaceService.getAll();
-    const vehicles = this.vehicleService.getAll();
+    const vehicles = this.residentService.getAll()
+      .flatMap(resident => resident.vehicles ?? []);
     const activeAssignments = this.assignmentService.getActive();
 
     return [

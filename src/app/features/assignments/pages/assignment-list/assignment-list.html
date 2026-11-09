@@ -7,7 +7,7 @@
         </div>
 
         <button class="btn-primary" (click)="openForm()"
-            [disabled]="residents.length === 0 || vehicles.length === 0 || keyBoxes.length === 0 || parkingSpaces.length === 0">
+            [disabled]="residents.length === 0 || keyBoxes.length === 0 || parkingSpaces.length === 0">
             + Nueva asignación
         </button>
     </div>
@@ -195,8 +195,9 @@
 
                     @for (vehicle of residentVehicles; track vehicle.id) {
                     <option [value]="vehicle.id">
-                        {{ vehicle.plate }} - {{ vehicle.brand }}
-                        {{ vehicle.model }} ({{ vehicle.ownerName }})
+                        {{ vehicle.plate }} - {{ vehicle.vehicleType === 'MOTORCYCLE' ? 'Moto' : 'Carro' }}
+                        - {{ vehicle.brand }}
+                        {{ vehicle.model }} ({{ selectedResident?.fullName }})
                     </option>
                     }
                 </select>

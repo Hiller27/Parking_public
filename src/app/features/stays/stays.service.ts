@@ -4,8 +4,8 @@ import { StorageService } from '../../core/storage/storage.service';
 import { KeyBoxService } from '../key-boxes/key-box.service';
 import { ParkingSpaceService } from '../parking-spaces/parking-space.service';
 import { PaymentMethod, Stay } from './stay.models';
-import { VehicleService } from '../vehicle/vehicle.service';
-import { Vehicle } from '../vehicle/vehicle.models';
+import { Resident, ResidentVehicle } from '../residents/resident.models';
+import { ResidentService } from '../residents/resident.service';
 import { OperationModeService } from '../settings/operation-mode.service';
 import { OperationMode } from '../settings/operation-mode.models';
 import { TariffService } from '../tariff/tariff.service';
@@ -22,7 +22,7 @@ export class StayService {
         private storage: StorageService,
         private keyBoxService: KeyBoxService,
         private parkingSpaceService: ParkingSpaceService,
-        private vehicleService: VehicleService,
+        private residentService: ResidentService,
         private modeService: OperationModeService,
         private tariffService: TariffService,
         private assignmentService: AssignmentService
@@ -56,6 +56,7 @@ export class StayService {
     registerEntry(data: {
         residentId?: string;
         vehicleId?: string;
+        vehicleType?: Stay['vehicleType'];
         vehiclePlate?: string;
         vehicleBrand?: string;
         vehicleModel?: string;
@@ -77,15 +78,18 @@ export class StayService {
             );
         }
 
-        let vehicle: Vehicle | undefined;
+        let resident: Resident | undefined;
+        let vehicle: ResidentVehicle | undefined;
         let plate = '';
+        let vehicleType: Stay['vehicleType'];
         let ownerName = '';
 
         if (mode === 'RESIDENTIAL') {
 
-            vehicle = this.vehicleService.getById(data.vehicleId ?? '');
+            resident = this.residentService.getById(data.residentId ?? '');
+            vehicle = resident?.vehicles?.find(item => item.id === data.vehicleId);
 
-            if (!vehicle || vehicle.status !== 'ACTIVE') {
+            if (!resident?.active || !vehicle || vehicle.status !== 'ACTIVE') {
                 throw new Error('El vehículo no existe o está inactivo.');
             }
 
@@ -112,14 +116,20 @@ export class StayService {
             }
 
             plate = vehicle.plate;
-            ownerName = vehicle.ownerName;
+            vehicleType = vehicle.vehicleType ?? 'CAR';
+            ownerName = resident.fullName;
 
         } else {
 
             plate = (data.vehiclePlate ?? '').trim().toUpperCase();
+            vehicleType = data.vehicleType;
 
             if (!plate) {
                 throw new Error('Debes ingresar la placa del vehículo.');
+            }
+
+            if (vehicleType !== 'CAR' && vehicleType !== 'MOTORCYCLE') {
+                throw new Error('Selecciona si el vehículo es carro o moto.');
             }
 
             if (!data.vehicleBrand?.trim() || !data.vehicleModel?.trim()) {
@@ -161,6 +171,7 @@ export class StayService {
             operationMode: mode,
             vehicleId: mode === 'RESIDENTIAL' ? vehicle?.id ?? '' : '',
             vehiclePlate: plate,
+            vehicleType,
             ...(mode === 'PUBLIC' ? {
                 vehicleBrand: data.vehicleBrand?.trim() ?? '',
                 vehicleModel: data.vehicleModel?.trim() ?? '',
@@ -230,9 +241,12 @@ export class StayService {
         // En residencial se verifica que sea propietario o autorizado.
         if (stay.operationMode === 'RESIDENTIAL') {
 
-            const vehicle = this.vehicleService.getById(stay.vehicleId);
+            const resident = this.findResidentForVehicle(stay.vehicleId);
+            const vehicle = resident?.vehicles?.find(
+                item => item.id === stay.vehicleId
+            );
 
-            if (!vehicle) {
+            if (!resident || !vehicle) {
                 throw new Error(
                     'No se encontró el vehículo para verificar la autorización.'
                 );
@@ -241,7 +255,7 @@ export class StayService {
             const normalizedDocument = document.toLowerCase();
 
             const isOwner =
-                vehicle.ownerDocument.trim().toLowerCase() === normalizedDocument;
+                resident.documentNumber.trim().toLowerCase() === normalizedDocument;
 
             const authorizedPerson = vehicle.authorizedPeople.find(
                 person =>
@@ -282,11 +296,14 @@ export class StayService {
 
         if (stay.operationMode === 'RESIDENTIAL') {
 
-            const vehicle = this.vehicleService.getById(stay.vehicleId)!;
+            const resident = this.findResidentForVehicle(stay.vehicleId)!;
+            const vehicle = resident.vehicles!.find(
+                item => item.id === stay.vehicleId
+            )!;
             const normalizedDocument = document.toLowerCase();
 
             const isOwner =
-                vehicle.ownerDocument.trim().toLowerCase() === normalizedDocument;
+                resident.documentNumber.trim().toLowerCase() === normalizedDocument;
 
             const authorizedPerson = vehicle.authorizedPeople.find(
                 person =>
@@ -294,7 +311,7 @@ export class StayService {
             );
 
             verifiedName = isOwner
-                ? vehicle.ownerName
+                ? resident.fullName
                 : authorizedPerson!.fullName;
         }
 
@@ -345,10 +362,18 @@ export class StayService {
         return closedStay;
     }
 
+    private findResidentForVehicle(vehicleId: string): Resident | undefined {
+        return this.residentService.getAll().find(resident =>
+            resident.vehicles?.some(vehicle => vehicle.id === vehicleId)
+        );
+    }
+
     private calculatePublicCharge(entryAt: string, exitAt: string): {
         chargedAmount: number;
         billedHours: number;
+        billedMinutes: number;
         durationMinutes: number;
+        tariffMinuteRate: number;
         tariffHourlyRate: number;
         tariffDailyCap: number;
     } {
@@ -356,11 +381,11 @@ export class StayService {
         const settings = this.tariffService.getSettings();
 
         if (
-            settings.hourlyRate <= 0 ||
+            settings.minuteRate <= 0 ||
             settings.dailyCap <= 0
         ) {
             throw new Error(
-                'Configura una tarifa por hora y un tope diario válidos antes de registrar salidas.'
+                'Configura una tarifa por minuto y un tope diario válidos antes de registrar salidas.'
             );
         }
 
@@ -379,11 +404,11 @@ export class StayService {
         const durationMinutes = Math.ceil(elapsedMilliseconds / 60000);
 
         const millisecondsPerDay = 24 * 60 * 60 * 1000;
-        const millisecondsPerHour = 60 * 60 * 1000;
+        const millisecondsPerMinute = 60 * 1000;
 
         let remainingTime = elapsedMilliseconds;
         let chargedAmount = 0;
-        let billedHours = 0;
+        let billedMinutes = 0;
 
         while (remainingTime > 0) {
 
@@ -392,26 +417,28 @@ export class StayService {
                 millisecondsPerDay
             );
 
-            const hoursInBlock = Math.ceil(
-                blockDuration / millisecondsPerHour
+            const minutesInBlock = Math.ceil(
+                blockDuration / millisecondsPerMinute
             );
 
             const blockAmount = Math.min(
-                hoursInBlock * settings.hourlyRate,
+                minutesInBlock * settings.minuteRate,
                 settings.dailyCap
             );
 
             chargedAmount += blockAmount;
-            billedHours += hoursInBlock;
+            billedMinutes += minutesInBlock;
 
             remainingTime -= blockDuration;
         }
 
         return {
             chargedAmount,
-            billedHours,
+            billedHours: Math.ceil(billedMinutes / 60),
+            billedMinutes,
             durationMinutes,
-            tariffHourlyRate: settings.hourlyRate,
+            tariffMinuteRate: settings.minuteRate,
+            tariffHourlyRate: settings.minuteRate * 60,
             tariffDailyCap: settings.dailyCap
         };
     }
@@ -420,7 +447,7 @@ export class StayService {
         return new Intl.NumberFormat('es-CO', {
             style: 'currency',
             currency: 'COP',
-            maximumFractionDigits: 0
+            maximumFractionDigits: 2
         }).format(value);
     }
 }

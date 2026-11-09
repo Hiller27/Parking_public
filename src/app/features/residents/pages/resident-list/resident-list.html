@@ -100,6 +100,7 @@
                             <div>
                                 <strong>{{ vehicle.plate }}</strong>
                                 <small>
+                                    {{ vehicle.vehicleType === 'MOTORCYCLE' ? 'Moto' : 'Carro' }} ·
                                     {{ vehicle.brand || 'Marca no registrada' }}
                                     {{ vehicle.model }}
                                     @if (vehicle.color) {
@@ -230,6 +231,14 @@
                     <label>Placa</label>
                     <input type="text" name="vehiclePlate" [(ngModel)]="form.vehiclePlate"
                         placeholder="Ej. ABC123" maxlength="10" />
+                </div>
+
+                <div class="form-group">
+                    <label>Tipo de vehículo</label>
+                    <select name="vehicleType" [(ngModel)]="form.vehicleType">
+                        <option value="CAR">Carro</option>
+                        <option value="MOTORCYCLE">Moto</option>
+                    </select>
                 </div>
 
                 <div class="form-group">

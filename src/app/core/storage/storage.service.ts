@@ -1,5 +1,6 @@
 
-import { Injectable, signal } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 type StorageScope = 'RESIDENTIAL' | 'PUBLIC';
 
@@ -7,6 +8,7 @@ type StorageScope = 'RESIDENTIAL' | 'PUBLIC';
     providedIn: 'root'
 })
 export class StorageService {
+    private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
     private readonly storageKey = 'parking-demo-state';
     private readonly modeDataKeys = [
         'residents',
@@ -19,6 +21,10 @@ export class StorageService {
     ];
 
     private loadState(): Record<string, unknown> {
+        if (!this.isBrowser) {
+            return {};
+        }
+
         try {
             const saved = localStorage.getItem(this.storageKey);
             return saved ? JSON.parse(saved) : {};
@@ -43,11 +49,7 @@ export class StorageService {
             [key]: value
         };
 
-        // Guardar primero; publicar el estado solo si funciona.
-        localStorage.setItem(
-            this.storageKey,
-            JSON.stringify(updated)
-        );
+        this.persist(updated);
 
         this.state.set(updated);
     }
@@ -58,7 +60,7 @@ export class StorageService {
             [this.scopedKey(key, mode)]: value
         };
 
-        localStorage.setItem(this.storageKey, JSON.stringify(updated));
+        this.persist(updated);
         this.state.set(updated);
     }
 
@@ -66,11 +68,7 @@ export class StorageService {
         const updated = { ...this.state() };
         delete updated[key];
 
-        localStorage.setItem(
-            this.storageKey,
-            JSON.stringify(updated)
-        );
-
+        this.persist(updated);
         this.state.set(updated);
     }
 
@@ -113,8 +111,17 @@ export class StorageService {
             }
         }
 
-        localStorage.setItem(this.storageKey, JSON.stringify(updated));
+        this.persist(updated);
         this.state.set(updated);
+    }
+
+    private persist(state: Record<string, unknown>): void {
+        if (!this.isBrowser) {
+            return;
+        }
+
+        // Guardar antes de publicar para conservar el comportamiento ante errores.
+        localStorage.setItem(this.storageKey, JSON.stringify(state));
     }
 
     private scopedKey(key: string, mode: StorageScope): string {

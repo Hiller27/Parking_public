@@ -2,8 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AssignmentService } from '../../../assignments/assignment.service';
 import { KeyBoxService } from '../../../key-boxes/key-box.service';
 import { ParkingSpaceService } from '../../../parking-spaces/parking-space.service';
+import { ResidentService } from '../../../residents/resident.service';
 import { StayService } from '../../../stays/stays.service';
-import { VehicleService } from '../../../vehicle/vehicle.service';
 import { DashboardHome } from './dashboard-home';
 
 describe('DashboardHome', () => {
@@ -15,7 +15,9 @@ describe('DashboardHome', () => {
     { status: 'AVAILABLE' },
     { status: 'OUT_OF_SERVICE' }
   ];
-  const vehicles = [{ status: 'ACTIVE' }, { status: 'INACTIVE' }];
+  const residents = [{
+    vehicles: [{ status: 'ACTIVE' }, { status: 'INACTIVE' }]
+  }];
   const activeAssignments = [{ id: 'assignment-1' }];
   const stays = [
     {
@@ -40,7 +42,7 @@ describe('DashboardHome', () => {
       providers: [
         { provide: KeyBoxService, useValue: { getAll: () => keyBoxes } },
         { provide: ParkingSpaceService, useValue: { getAll: () => parkingSpaces } },
-        { provide: VehicleService, useValue: { getAll: () => vehicles } },
+        { provide: ResidentService, useValue: { getAll: () => residents } },
         { provide: AssignmentService, useValue: { getActive: () => activeAssignments } },
         { provide: StayService, useValue: { getAll: () => stays } }
       ]

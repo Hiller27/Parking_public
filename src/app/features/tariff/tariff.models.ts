@@ -1,6 +1,6 @@
 
 export interface TariffSettings {
-    hourlyRate: number;
+    minuteRate: number;
     dailyCap: number;
     monthlyRate: number;
     currency: 'COP';
